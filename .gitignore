@@ -1,0 +1,26 @@
+#dataset
+data/
+datasets/
+*.zip
+
+#training artifacts
+runs/
+*.pt
+!backend/weights/best.pt
+
+#output dev segment.py
+crops/
+*_vis.jpg
+*_mask.jpg
+
+#python env
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+#IDE
+.DS_Store
+.vscode/
+.idea/
