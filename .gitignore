@@ -8,7 +8,7 @@ runs/
 *.pt
 !backend/weights/best.pt
 
-#output dev segment.py
+#output of segment.py
 crops/
 *_vis.jpg
 *_mask.jpg
