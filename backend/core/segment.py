@@ -267,7 +267,7 @@ def detect_beans(bgr, target_w=1600, pad=4, debug=False):
         for f in flagged:
             x, y, bw, bh = f["bbox"]
             cv2.rectangle(vis, (x, y), (x + bw, y + bh), (0, 0, 255), 3)
-            cv2.putText(vis, "?x%d" % f["est_beans"], (x, y - 6),
+            cv2.putText(vis, f"?x{f['est_beans']}", (x, y - 6),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2, cv2.LINE_AA)
         for i, d in enumerate(out):
             x, y, bw, bh = d["bbox"]
@@ -285,7 +285,7 @@ if __name__ == "__main__":
     path = sys.argv[1] if len(sys.argv) > 1 else "tests/images/tray_real_01.jpg"
     img = cv2.imread(path)
     if img is None:
-        sys.exit("Gagal baca gambar: %s" % path)
+        sys.exit(f"Gagal baca gambar: {path}")
 
     beans, flagged, warn, frag, frag_n, edge_n, vis, mask = detect_beans(img, debug=True)
 
@@ -293,23 +293,23 @@ if __name__ == "__main__":
     print("biji terdeteksi  :", len(beans))
     if flagged:
         print("gumpalan ditandai:", len(flagged),
-              "(perkiraan %d biji di dalamnya)" % sum(f["est_beans"] for f in flagged))
+              f"(perkiraan {sum(f['est_beans'] for f in flagged)} biji di dalamnya)")
         print("Pisahkan bijinya lalu foto ulang")
     else:
         print("gumpalan ditandai: 0")
 
-    print("serpihan dibuang : %d potong (%.1f%% luas)" % (frag_n, 100 * frag))
-    print("kena tepi frame  : %d objek" % edge_n)
+    print(f"serpihan dibuang : {frag_n} potong ({100 * frag:.1f}% luas)")
+    print(f"kena tepi frame  : {edge_n} objek")
     if warn:
         print("Curiga banyak serpihan, kemungkinan ada biji yang pecah dan tidak terhitung. cek _mask.jpg sebelum percaya angkanya")
 
     #dump visuals for manual inspection: vis = boxes overlaid, mask = raw binary mask, crops/ = per-bean images
     stem = os.path.splitext(os.path.basename(path))[0]
-    cv2.imwrite("%s_vis.jpg" % stem, vis)
-    cv2.imwrite("%s_mask.jpg" % stem, mask)
+    cv2.imwrite(f"{stem}_vis.jpg", vis)
+    cv2.imwrite(f"{stem}_mask.jpg", mask)
     os.makedirs("crops", exist_ok=True)
     for i, b in enumerate(beans):
-        cv2.imwrite("crops/%s_%03d.jpg" % (stem, i), b["crop"])
+        cv2.imwrite(f"crops/{stem}_{i:03d}.jpg", b["crop"])
 
     print()
-    print(f"output: {stem}_vis.jpg, {stem}_mask.jpg, crops/") #where the files can be found 
+    print(f"output: {stem}_vis.jpg, {stem}_mask.jpg, crops/") #where the files can be found
