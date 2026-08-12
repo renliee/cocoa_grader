@@ -192,7 +192,7 @@ def detect_beans(bgr, target_w=config.TARGET_WIDTH, pad=config.CROP_PAD, debug=F
     #3. calibrate area thresholds based on each photo's own data
     cnts, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     if not cnts:
-        return []
+        return ([], [], False, 0.0, 0, 0, bgr.copy(), mask) if debug else ([], [], False, 0.0, 0, 0)
     areas = np.array([cv2.contourArea(c) for c in cnts])
 
     #Estimate bean area using an area weighted median. This prevents many tiny noise contours from pulling the estimate down.
@@ -200,10 +200,10 @@ def detect_beans(bgr, target_w=config.TARGET_WIDTH, pad=config.CROP_PAD, debug=F
     srt = np.sort(areas)
     cum = np.cumsum(srt)
     if cum[-1] <= 0:
-        return []
+        return ([], [], False, 0.0, 0, 0, bgr.copy(), mask) if debug else ([], [], False, 0.0, 0, 0)
     med = float(srt[min(int(np.searchsorted(cum, cum[-1] / 2.0)), len(srt) - 1)])
     if med <= 0:
-        return []
+        return ([], [], False, 0.0, 0, 0, bgr.copy(), mask) if debug else ([], [], False, 0.0, 0, 0)
 
     lo = config.AREA_MIN_FACTOR * med  #below lo will be treated as debris, shadow, fragment
     split_at = config.AREA_SPLIT_FACTOR * med #above split_at will be treated as a candidate for touching beans
