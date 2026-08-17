@@ -254,8 +254,11 @@ def detect_beans(bgr, target_w=config.TARGET_WIDTH, pad=config.CROP_PAD, debug=F
         #crop tightly around the bean, then add black padding during classification to match the training images (SANTOS).
         x0, y0 = max(0, x - pad), max(0, y - pad)
         x1, y1 = min(W, x + bw + pad), min(H, y + bh + pad)
+        bean_mask = np.zeros((y1 - y0, x1 - x0), np.uint8)
+        cv2.drawContours(bean_mask, [c], -1, 255, -1, offset=(-x0, -y0))
         out.append({
             "crop": bgr[y0:y1, x0:x1].copy(),
+            "mask": bean_mask,
             "bbox": (x0, y0, x1 - x0, y1 - y0),
             "area": float(a),
             "ar": float(ar),
