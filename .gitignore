@@ -24,3 +24,14 @@ __pycache__/
 .DS_Store
 .vscode/
 .idea/
+
+#models
+backend/weights/best_4class_backup.pt
+backend/weights/best_binary_3to1.pt
+backend/weights/best_binary_bal.pt
+
+#local evaluation and throwaway analysis
+backend/eval_images/
+backend/gate_*.py
+backend/gate_predictions.csv
+backend/check_mask.py
