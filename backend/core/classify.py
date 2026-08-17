@@ -11,11 +11,6 @@ except ImportError:
     import config #runs if this file is run as __main__
 
 
-#expected class names. Must match the folder names used at training time and the classes tuple in grade.py. 
-#Ultralytics reads image folder directories in alphabetical order, which is why this list is alphabetical.
-EXPECTED_CLASSES = ("fermented", "slaty", "under_fermented", "violet")
-
-
 def load_model(weights_path):
     """
     Load the classifier model and verify its class names before anything else runs.
@@ -29,11 +24,11 @@ def load_model(weights_path):
     model = YOLO(weights_path)
     names = tuple(model.names[i] for i in sorted(model.names))
 
-    if names != EXPECTED_CLASSES:
+    if names != config.CLASS_NAMES:
         raise ValueError(
             f"kelas model tidak cocok.\n"
             f"model     : {names}\n"
-            f"diharapkan: {EXPECTED_CLASSES}\n"
+            f"diharapkan: {config.CLASS_NAMES}\n"
         )
 
     return model
@@ -44,8 +39,7 @@ def prepare_crop(bgr, pad_mode=None, mask=None, g_gain=None):
     Turn a bean crop image to a square image that the classifier can accept.
 
     Why pad instead of crop directly: Ultralytics resizes to the short side and then centre crops. A bean crop is taller than it is wide, 
-    so the centre crop removes the ends of the bean. We have tested that and predictions collapsed to violet at probability 1.00 on every bean, 
-    because the ends carry class signal. Padding to square first means the whole bean survives the resize. 
+    so the centre crop removes the ends of the bean. Padding to square first means the whole bean survives the resize. 
     The pad colour is black to match the training background, which is pure [0, 0, 0].
 
     mask : When supplied and enabled in config, everything outside the bean is set to black. A rectangular crop of an elliptical bean 
@@ -154,18 +148,18 @@ if __name__ == "__main__":
     #print each images lable, confidence, and slaty percentage
     for p, h in zip(files, hasil):
         print(f" {p.name:<28} {h['label']:<16} {h['conf']:.3f}"
-              f"   P(slaty)={h['probs']['slaty']:.4f}")
+              f"   P(fermented)={h['probs']['fermented']:.4f}")
 
     labels = [h["label"] for h in hasil]
-    p_slaty = [h["probs"]["slaty"] for h in hasil]
+    p_fermented = [h["probs"]["fermented"] for h in hasil]
 
     #print lable, lable counts, and percentage 
     print()
-    for c in EXPECTED_CLASSES:
+    for c in config.CLASS_NAMES:
         n = labels.count(c)
         print(f"  {c:<18} {n:3d}  ({100 * n / len(labels):5.1f}%)")
 
     #these metrics help determine whether the model transfers well to real beans.
     print()
-    print(f"P(slaty) pada semua crop: max = {max(p_slaty):.4f};  "
-          f"rata-rata = {sum(p_slaty) / len(p_slaty):.4f};")
+    print(f"P(fermented) pada semua crop: max = {max(p_fermented):.4f};  "
+          f"rata-rata = {sum(p_fermented) / len(p_fermented):.4f};")
