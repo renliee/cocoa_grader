@@ -5,7 +5,7 @@ Separated from segment.py because these numbers decide whether a bean gets
 counted, split, or thrown away. Written inline they read as arbitrary, and a
 reader cannot tell which ones were tested and which are guesses.
 
-Each constant carries a validation tag:
+Each constant carries a validation tag (except CLASS_NAMES at the most bottom, which is a hard requirement based on the training labels):
 
 1. SWEPT       : tested across several values and images, failure points known
 2. REASONED    : derived from a property of the data or from a failure we actually observed, but never swept
@@ -113,18 +113,24 @@ WARN_FRAGMENT_AREA = 0.05
 #Bean ends carry class signal, so the whole bean has to be saved. Black matches the training background exactly (Santos et al. 2023).
 PAD_MODE = "black"
 
-#UNDECIDED, waiting on the experiment. A square crop of an elongated bean leaves paper in the corners, 
-#measured at 28.6% to 37.6% of each crop across 16 real beans, against pure black in the same positions in the training images.
-MASK_BACKGROUND_IN_CROP = False
+#Set pixels outside the bean contour to black. Real crops contained 28.6–37.6% paper in the corners, unlike the pure black background used in training.
+#REASONED. Local gate: 121 beans across 8 photos. Mask alone improved fermented recall from 5/21 to 8/21; mask + gain 1.24 reached 15/21, supporting the change.
+MASK_BACKGROUND_IN_CROP = True
 
-#Gain applied to the green channel before inference, to push a field photo toward the training distribution.
-#UNDECIDED. Removing the green cast from the Santos test set dropped macro-F1 from 0.846 to 0.595 and slaty recall from 0.967 to 0.367, 
-#which confirms the model depends on it. The candidate value for field photos is around 1.24, the inverse of the 0.807 factor used in that test. Untested, so 1.0 means off.
-#NOTE: The backgrounds are pure black. But the beans themselves do carry a green cast, which is the signature of an additive cast rather than the true colour of the bean.
-GREEN_CAST_G_GAIN = 1.0
+#Boost the green channel before inference to match the training distribution.
+#REASONED. With mask on, fermented recall improved from 8/21 to 15/21 at gain 1.24.
+GREEN_CAST_G_GAIN = 1.24
 
 #Input size fed to the classifier. Must match the imgsz recorded in the training run's args.yaml. REASONED.
 CLASSIFY_IMGSZ = 224
 
 #how many crops go to the model per forward pass. UNVALIDATED, picked to keep memory predictable on a laptop CPU. Affects speed only, never results.
 CLASSIFY_BATCH = 16
+
+#Sample size the cut test is defined on. Below this, the app labels the percentage indicative rather than settled.
+#REASONED, from the cut test sample size in SNI 2323:2008.
+MIN_SAMPLE_FULL = 300
+
+#class names the pipeline expects, there is no validation tag because this is a hard requirement. 
+#the model must be trained with exactly these names, in this order (Alphabetically). "load_model" raises if this does not match model.names exactly.
+CLASS_NAMES = ("fermented", "poorly_fermented")
