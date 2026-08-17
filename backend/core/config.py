@@ -84,9 +84,9 @@ AREA_MIN_FACTOR = 0.45
 #A threshold of 2.0 lets a touching pair through as one bean.
 AREA_SPLIT_FACTOR = 1.40
 
-#Above this after splitting would be reported as an unresolved blob, we avoid guessing.
-#UNVALIDATED.
-AREA_MAX_FACTOR = 1.55
+#Above this, blobs are reported unresolved rather than guessed. REASONED. 100+ local beans: max false flag was 1.70 area factor.
+#Touching pairs overlap at 1.6 - 2.1x median, so area alone is insufficient; pairs must split or show pair like aspect.
+AREA_MAX_FACTOR = 1.75
 
 #Fragments smaller than 0.08 times the average seed area are discarded without any record, unlike larger fragments which are recorded as dropped_n. 
 #UNVALIDATED
