@@ -2,7 +2,7 @@
 
 Menghitung komposisi tingkat fermentasi satu lot biji kakao dari foto hasil *cut test*.
 
-Pengguna sasaran adalah pengepul, titik pengumpulan pertama antara petani dan industri
+Pengguna sasaran adalah tengkulak, titik pengumpulan pertama antara petani dan industri
 cokelat. Satu atau beberapa foto diunggah, tiap biji pada foto dipisahkan lalu
 diklasifikasi ke salah satu dari dua kelas: **Terfermentasi baik** atau
 **Kurang terfermentasi**. Hasilnya dilaporkan sebagai proporsi lot, bukan vonis per biji.
@@ -34,6 +34,12 @@ Memantau prosesnya :
 docker compose logs -f backend
 ```
 
+Backend mencatat tiap tahap ke stdout: model yang dimuat beserta nama kelasnya saat
+startup, lalu per permintaan berupa nama tiap foto, durasi segmentasi dan klasifikasi,
+serta hitungan biji dari masing masing tahap. Angkanya sama dengan yang tampil di
+halaman. Permintaan healthcheck tidak ikut dicatat supaya log tidak tenggelam oleh baris
+berulang tiap 10 detik.
+
 Menghentikan:
 
 ```bash
@@ -52,6 +58,9 @@ frontend/          HTML, CSS, JS vanilla, dijalankan dengan nginx
 backend/main.py    HTTP layers, satu satunya file yang mengimpor FastAPI
 backend/core/      pipeline utama, bebas framework
 ```
+
+`ml/` tidak termasuk di dalamnya. Isinya notebook pelatihan dan bukti evaluasi, tidak ikut
+ke dalam image Docker dan tidak dipanggil saat inferensi.
 
 `backend/core/` tidak mengimpor FastAPI sama sekali. Setiap modul di dalamnya bisa
 dijalankan langsung dari terminal untuk diperiksa terpisah dari server:
@@ -77,12 +86,13 @@ di CPU tidak selesai dalam batas normal bawaan nginx.
    untuk memisahkan biji yang bersentuhan. Deterministik, tidak ada model terlatih di
    tahap ini.
 2. **`classify.py`** mengklasifikasi setiap potongan biji dengan model YOLO11n-cls.
-   Sebelum diklasifikasi, tiap potongan diproses melalui dua langkah. Pertama, area di luar
-   bentuk biji (sisa kertas alas yang ikut terpotong di pojok) diubah jadi hitam, supaya
-   model tidak membaca kertas sebagai bagian biji. Kedua, potongan yang bentuknya
-   memanjang diberi bingkai hitam di sisi pendeknya sampai berbentuk persegi, karena
-   YOLO memotong bagian tengah gambar sebelum memprosesnya, jika tidak dipersegikan,
-   ujung ujung biji akan ikut terpotong.
+   Sebelum diklasifikasi, tiap potongan diproses melalui tiga langkah. Pertama, area di luar bentuk biji 
+   diubah jadi hitam. Potongan hasil segmentasi masih menyisakan kertas alas di pojoknya, terukur 28,6% 
+   sampai 37,6% dari tiap potongan, sedangkan pada posisi yang sama di data latih selalu hitam. Karena 
+   model memproses seluruh isi potongan, bagian kertas itu ikut memengaruhi hasil klasifikasi.
+   Kedua, potongan yang bentuknya memanjang diberi bingkai hitam di sisi pendeknya sampai berbentuk persegi, 
+   karena YOLO memotong bagian tengah gambar sebelum memprosesnya, jika tidak dipersegikan, ujung ujung 
+   biji akan ikut terpotong. Ketiga, channel hijau dikalikan dengan gain tetap untuk mendekatkan warna foto ke kondisi data latih.
 3. **`grade.py`** menghitung jumlah dan persentase per kelas, serta menyusun catatan
    kalau ukuran sampel kecil atau jika ada biji yang tidak terbaca.
 
@@ -152,9 +162,9 @@ folder dipakai, 800 citra.
 Alur pelatihan, perbandingan komposisi data latih, dan batasan angkanya ada di
 `ml/cocoa.ipynb`.
 
-`backend/gate_labels.csv` berisi label 121 biji dari 8 foto biji lokal, dipakai untuk
-memeriksa apakah model masih bekerja di luar kondisi data latih. Label dikunci sebelum
-prediksi model dilihat.
+`ml/gate/` berisi evaluasi model pada 8 foto biji lokal: 121 label acuan, foto aslinya,
+dan salinan bernomor supaya tiap baris label bisa ditelusuri ke biji yang dimaksud.
+Label dikunci sebelum prediksi model dilihat. Rinciannya ada di `ml/gate/README.md`.
 
 Bobot bisa diganti lewat variabel lingkungan docker `KAKAO_WEIGHTS`. Model dimuat sekali saat
 startup, bukan per permintaan, dan nama kelasnya diperiksa terhadap `config.CLASS_NAMES`
@@ -174,7 +184,6 @@ backend/
     grade.py           penghitungan komposisi
   weights/best.pt      bobot model
   tests/images/        foto uji
-  gate_labels.csv      label evaluasi biji lokal
   requirements.txt
   Dockerfile
 frontend/
@@ -183,17 +192,25 @@ frontend/
   Dockerfile
 ml/
   cocoa.ipynb          notebook training
+  gate/
+    README.md          cara membaca evaluasi biji lokal
+    gate_labels.csv    121 label acuan
+    images/            8 foto asli
+    images_numbered/   8 foto yang sama dengan nomor biji
 docker-compose.yml
 ```
 
 ## Catatan teknis
 
-PyTorch dipasang dari indeks CPU di Dockerfile, bukan lewat `requirements.txt`, agar image
+1. PyTorch dipasang dari indeks CPU di Dockerfile, bukan lewat `requirements.txt`, agar image
 tidak membawa dependency CUDA yang tidak diperlukan.
 
-`requirements.txt` memakai `opencv-python`, bukan versi headless. `ultralytics` bergantung
+2. `requirements.txt` memakai `opencv-python`, bukan versi headless. `ultralytics` bergantung
 pada varian non headless, dan memasang dua duanya bersamaan membuat dua package menulis ke directory
 `cv2/` yang sama.
 
-Konstanta di `config.py` diberi tag `SWEPT`, `REASONED`, `UNVALIDATED`, atau `UNDECIDED`
+3. Konstanta di `config.py` diberi tag `SWEPT`, `REASONED`, dan `UNVALIDATED`.
 agar pembaca bisa membedakan nilai yang sudah diuji dari nilai yang masih dugaan.
+
+4. Timestamp pada log backend ditulis dalam WIB dengan offset tetap UTC+7, bukan mengikuti
+zona waktu kontainer.
