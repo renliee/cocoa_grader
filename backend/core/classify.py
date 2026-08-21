@@ -137,8 +137,9 @@ if __name__ == "__main__":
     print(f"model : {weights}")
     print(f"kelas : {tuple(model.names[i] for i in sorted(model.names))}")
     print(f"crop  : {len(files)} file dari {crop_dir}")
-    print(f"pad   : {config.PAD_MODE}   mask: {config.MASK_BACKGROUND_IN_CROP}"
-          f"   g_gain: {config.GREEN_CAST_G_GAIN}")
+    #crops on disk carry no mask, so the masking step cannot run here even though it is enabled in config
+    print(f"pad   : {config.PAD_MODE}   mask: tidak diterapkan (crop dari berkas tidak menyimpan mask)   g_gain: {config.GREEN_CAST_G_GAIN}")
+    print("catatan: runner ini untuk inspeksi manual, hasilnya bisa berbeda dari aplikasi karena masking tidak aktif")
     print()
 
     #read the imges and prepare them for classification. 
