@@ -10,7 +10,6 @@ Each constant carries a validation tag (except CLASS_NAMES at the most bottom, w
 1. SWEPT       : tested across several values and images, failure points known
 2. REASONED    : derived from a property of the data or from a failure we actually observed, but never swept
 3. UNVALIDATED : plausible guess, never tested
-4. UNDECIDED   : waiting on an experiment, currently disabled
 """
 
 #Resize every photo to this width first, so absolute area thresholds mean the same thing across phones with different resolutions.
@@ -117,8 +116,10 @@ PAD_MODE = "black"
 #REASONED. Local gate: 121 beans across 8 photos. Mask alone improved fermented recall from 5/21 to 8/21; mask + gain 1.24 reached 15/21, supporting the change.
 MASK_BACKGROUND_IN_CROP = True
 
-#Boost the green channel before inference to match the training distribution.
-#REASONED. With mask on, fermented recall improved from 8/21 to 15/21 at gain 1.24.
+#Boost the green channel before inference so field photo gets closer to the training colours.
+#REASONED. 1.24 is the inverse of 0.807, which is mean(R)/mean(G) over framed_and_centralized dataset (R 61.1, G 75.7). 
+#Scaling G by 0.807 on the Santos test set dropped macro-F1 from 0.846 to 0.595, so the model leans on the green cast. 
+#Kept because the local gate measured it, fermented recall 8/21 at gain 1.0, 15/21 at 1.24. 
 GREEN_CAST_G_GAIN = 1.24
 
 #Input size fed to the classifier. Must match the imgsz recorded in the training run's args.yaml. REASONED.
