@@ -228,10 +228,17 @@ def detect_beans(bgr, target_w=config.TARGET_WIDTH, pad=config.CROP_PAD, debug=F
     for c in cnts:
         a = cv2.contourArea(c)
         x, y, bw, bh = cv2.boundingRect(c)
+        ar = max(bw, bh) / max(1, min(bw, bh))
 
-        #drop anything touching the frame edge (surfaces outside the sheet like tables could slip through if sheet detection failed and a bean cut off by the photo edge will be treated as invalid bean.)
+        #drop anything touching the frame edge (surfaces outside the sheet like tables could slip through if sheet detection failed and a bean cut off by the photo edge will be treated as invalid bean.
         if x <= 1 or y <= 1 or x + bw >= W - 1 or y + bh >= H - 1:
-            edge_n += 1
+            #classified a bean being cut in edge only if it is true for these both conditions
+            #a clipped bean has a truncated area so 'lo' cannot apply here. Measured: dust sits at 0.001 to 0.002 of med while
+            #the table surface above the sheet passes on area at 0.138 but reads 7.7 aspect ratio, so both filters are needed.
+            if a >= config.FRAGMENT_MIN_FACTOR * med and ar <= config.MAX_ASPECT_RATIO: 
+                edge_n += 1
+            else:
+                dropped_area += a
             continue
 
         if a > hi:
@@ -246,7 +253,7 @@ def detect_beans(bgr, target_w=config.TARGET_WIDTH, pad=config.CROP_PAD, debug=F
             if a >= config.FRAGMENT_MIN_FACTOR * med:
                 dropped_n += 1
             continue
-        ar = max(bw, bh) / max(1, min(bw, bh))
+        
         if ar > config.MAX_ASPECT_RATIO: #too elongated (shadow)
             continue
         if a / (bw * bh) < config.MIN_SOLIDITY: #object doesnt fill enough of its bounding box.
