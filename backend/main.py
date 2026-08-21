@@ -7,7 +7,9 @@ Can receive multiple photos per request. One sheet of paper holds roughly 15 bea
 and the cut test requires more than 15 beans to provide a representative sample.
 """
 import base64
+import logging
 import os
+import time
 from contextlib import asynccontextmanager
 from typing import Annotated, List
 
@@ -31,6 +33,39 @@ MAX_FILE_BYTES = 10 * 1024 * 1024
 ANNOTATED_WIDTH = 1280
 ANNOTATED_JPEG_QUALITY = 80
 
+#logger formatter
+LOG_FORMAT = "%(asctime)s %(levelname)-7s %(name)s | %(message)s"
+DATE_FORMAT = "%H:%M:%S"
+
+class _SkipHealth(logging.Filter):
+    """Drop the docker healthcheck from the access log because it fires every 10s and would cover up the real request lines."""
+    def filter(self, record):
+        return "/api/health" not in record.getMessage()
+
+
+def _setup_logging():
+    """
+    Uvicorn only configures its own loggers and leaves the root logger empty, so a new logger would fall through to
+    lastResort at WARNING level and every INFO line would vanish with no error. Configure root here, then restamp
+    uvicorn's handlers with the same format because its default access line carries no timestamp at all.
+    """
+    #WIB is UTC+7, staticmethod is required, a bare function assigned on the class would bind and receive self.
+    logging.Formatter.converter = staticmethod(lambda secs: time.gmtime(secs + 7 * 3600))
+    logging.basicConfig(level=logging.INFO, format=LOG_FORMAT, datefmt=DATE_FORMAT) 
+    fmt = logging.Formatter(LOG_FORMAT, DATE_FORMAT)
+    for name in ("uvicorn", "uvicorn.error", "uvicorn.access"):
+        for h in logging.getLogger(name).handlers:
+            h.setFormatter(fmt)
+    logging.getLogger("uvicorn.access").addFilter(_SkipHealth()) #ignore healthcheck 
+
+
+_setup_logging()
+log = logging.getLogger("kakaolens") 
+
+def _ringkas_kelas(nilai, satuan=""):
+    """Class values in the wording the browser uses, so the log and the screen can be read side by side."""
+    return ", ".join(f"{grade.LABEL_ID[c].lower()} {nilai[c]}{satuan}" for c in config.CLASS_NAMES)
+
 _model = {}
 
 
@@ -40,9 +75,14 @@ async def lifespan(app: FastAPI):
     Load the classifier model once at startup (fast failure always better than silent failure).
     Loading per request would add seconds of latency to every call and would also delay a class name mismatch until a user hits the endpoint. 
     """
+    t0 = time.perf_counter() #track the time before loading the model (to count the ms later)
     _model["clf"] = classify.load_model(WEIGHTS_PATH)
+    #report the classes the loaded model actually carries, not the ones config expects, so the line is evidence rather than an echo
+    names = _model["clf"].names
+    log.info("model dimuat: %s | kelas %s | %.0f ms", WEIGHTS_PATH, tuple(names[i] for i in sorted(names)), 1000 * (time.perf_counter() - t0))
     yield
     _model.clear() #clear model on shutdown
+    log.info("model dilepas, backend berhenti")
 
 
 app = FastAPI(
@@ -102,7 +142,7 @@ def _annotate(img, beans, hasil):
         cv2.putText(canvas, f"{i} {grade.LABEL_ID[h_['label']]}", (x, ty), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2, cv2.LINE_AA) #put the label on the image
 
     #clusters the splitter could not resolve are intentionally not boxed on the image;
-    #they're explained via catatan_rincian text instead (a box here read as a false artifact).
+    #they're explained via catatan_rincian text instead.
 
     #set the width of annonated img to fixed size before sending it back to the browser
     ch, cw = canvas.shape[:2]
@@ -118,11 +158,21 @@ def _annotate(img, beans, hasil):
 
 def _analyze_one(img, name):
     """Run one photo through segmentation and classification."""
+    t0 = time.perf_counter() #t0 here is used to track the ms
     beans, flagged, warn, frag, dropped_n, edge_n = segment.detect_beans(img, target_w=config.TARGET_WIDTH, pad=config.CROP_PAD)
+    t_seg = time.perf_counter() - t0
 
+    t1 = time.perf_counter()
     hasil = classify.classify_tray(_model["clf"], beans) if beans else []
+    t_clf = time.perf_counter() - t1
+
     labels = [h["label"] for h in hasil]
+    jumlah_kelas = {c: labels.count(c) for c in config.CLASS_NAMES}
     n_unreadable = _count_unreadable(flagged, dropped_n, edge_n)
+
+    #the numbers on these two lines are the same ones the browser will show, so a viewer can check the log against the screen
+    log.info("segmentasi  %4.0f ms | %d terbaca, %d gumpalan, %d serpihan, %d kena tepi", 1000 * t_seg, len(beans), len(flagged), dropped_n, edge_n)
+    log.info("klasifikasi %4.0f ms | %s", 1000 * t_clf, _ringkas_kelas(jumlah_kelas))
 
     laporan = {
         "nama": name,
@@ -133,7 +183,7 @@ def _analyze_one(img, name):
         "kena_tepi": edge_n,
         "luas_terbuang": round(100 * frag, 1),
         "segmentasi_curiga": bool(warn),
-        "jumlah_kelas": {c: labels.count(c) for c in config.CLASS_NAMES},
+        "jumlah_kelas": jumlah_kelas,
     }
 
     #shows the min and max probability of fermented beans in the tray, rounded to 4 decimal places. 
@@ -163,14 +213,18 @@ async def analyze(files: List[UploadFile] = File(...)):
     if len(files) > MAX_FILES:
         raise HTTPException(400, f"Maksimal {MAX_FILES} foto per permintaan, dikirim {len(files)}.")
 
+    t_req = time.perf_counter()
+    log.info("permintaan analisis diterima, %d foto", len(files))
+
     semua_label, total_unreadable, per_foto = [], 0, []
 
-    for f in files:
+    for i, f in enumerate(files, 1):
         raw = await f.read() #read file and save it as a bytes object. 
         if len(raw) > MAX_FILE_BYTES:
             raise HTTPException(400, f"'{f.filename}' lebih dari {MAX_FILE_BYTES // (1024 * 1024)} MB.")
 
-        labels, n_unread, laporan = _analyze_one(_decode(raw, f.filename),f.filename)
+        log.info("[%d/%d] %s", i, len(files), f.filename) #to show every photo number index
+        labels, n_unread, laporan = _analyze_one(_decode(raw, f.filename), f.filename)
         semua_label += labels
         total_unreadable += n_unread
         per_foto.append(laporan)
@@ -189,6 +243,13 @@ async def analyze(files: List[UploadFile] = File(...)):
                 for p in per_foto if p["segmentasi_curiga"]]
     blocking += [f"Tidak ada biji yang terdeteksi pada “{n}”." for n in kosong]
 
+    #warning level so a blocked result stands out from the routine lines instead of scrolling past unnoticed
+    for b in blocking:
+        log.warning("perlu diperhatikan: %s", b)
+    
+    log.info("ringkasan %d foto | %d biji terbaca, %d tidak terbaca", len(files), len(semua_label), total_unreadable) #summary of all photos classified in numbers
+    log.info("hasil | %s | total %.0f ms", _ringkas_kelas(hasil["persen"], "%"), 1000 * (time.perf_counter() - t_req)) #summary of all photos classified in percent
+    
     return {
         "ringkasan": hasil,
         "laporan": grade.format_report(hasil),
