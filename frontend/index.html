@@ -554,7 +554,7 @@ el("hapus-semua").onclick = () => {
 };
 
 function validasiFile(files) {
-  if (!files.length) return "Pilih minimal satu foto dulu.";
+  if (!files.length) return "Pilih minimal satu foto terlebih dahulu.";
   if (files.length > MAX_FILES) return `Maksimal ${MAX_FILES} foto per pengiriman, dipilih ${files.length}.`;
   let total = 0;
   for (const f of files) {

@@ -233,7 +233,7 @@ async def analyze(files: List[UploadFile] = File(...)):
     kosong = [p["nama"] for p in per_foto if p["biji_terbaca"] == 0]
 
     if not semua_label:
-        raise HTTPException(422, "Tidak ada biji yang terbaca di foto manapun. Periksa jarak antar biji dan pastikan kertas alas tidak mepet tepi foto.")
+        raise HTTPException(422, "Tidak ada biji kakao yang terdeteksi pada foto. Pastikan biji tidak terlalu rapat dan seluruh area kertas alas terlihat dalam foto.")
 
     hasil = grade.grade(semua_label, n_unreadable=total_unreadable, n_photos=len(files))
 
