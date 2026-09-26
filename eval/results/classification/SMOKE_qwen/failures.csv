@@ -1,0 +1,6 @@
+stem,set,variant,sheet,idx,label,pred,correct,status,confidence,p_fermented,latency_ms,attempts,input_tokens,output_tokens,cost_usd,raw_output,error
+val_blur_1,val,blur,1,4,poorly_fermented,fermented,False,ok,0.95,,3263.9,1,161,17,0.0,"{""label"": ""fermented"", ""confidence"": 0.95}",
+val_blur_1,val,blur,1,6,poorly_fermented,fermented,False,ok,0.95,,3278.4,1,161,17,0.0,"{""label"": ""fermented"", ""confidence"": 0.95}",
+val_blur_1,val,blur,1,11,poorly_fermented,fermented,False,ok,0.95,,2987.1,1,150,17,0.0,"{""label"": ""fermented"", ""confidence"": 0.95}",
+val_blur_1,val,blur,1,12,poorly_fermented,fermented,False,ok,0.95,,3477.5,1,161,17,0.0,"{""label"": ""fermented"", ""confidence"": 0.95}",
+val_blur_2,val,blur,2,1,poorly_fermented,fermented,False,ok,0.95,,4096.7,1,161,17,0.0,"{""label"": ""fermented"", ""confidence"": 0.95}",

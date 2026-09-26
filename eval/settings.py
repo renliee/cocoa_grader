@@ -29,7 +29,7 @@ EXPECTED_NUMPY = "2.4.4"
 
 # --model aliases. sha256_prefix guards against the file being replaced by a fine-tuned one.
 MODEL_ALIASES = {
-    "before": {"kind": "yolo", "weights": BACKEND / "weights" / "best.pt", "sha256_prefix": "3165f4496810"},
+    "before": {"kind": "yolo", "weights": REPO / "ml" / "finetune" / "weights" / "best_before.pt", "sha256_prefix": "3165f4496810"},
     "gpt6_sol": {"kind": "openai", "model_id": "gpt-6-sol"},
     "gemini35_flash_lite": {"kind": "gemini", "model_id": "gemini-3.5-flash-lite"},
     "qwen3_vl_4b_instruct": {"kind": "local", "model_id": "qwen3-vl:4b-instruct"},
@@ -41,7 +41,10 @@ LOCAL_BASE_URL = "http://localhost:11434/v1"   # Ollama's OpenAI-compatible endp
 
 # USD per 1M tokens (input, output), keyed by the exact model ID. Copy from the provider's
 # pricing page. A model missing here gets no cost figure, never a guessed one.
-PRICES: dict[str, tuple[float, float]] = {}
+PRICES: dict[str, tuple[float, float]] = {
+    "gpt-6-sol": (2.00, 10.00),
+    "gemini-3.5-flash-lite": (0.30, 2.50),
+}
 
 # Decision rules, counted in beans. Fix these before comparing runs.
 IMPROVE_NET_FIXED = 3    # a candidate beats its parent only if (fixed - broken) >= this on val

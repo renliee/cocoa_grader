@@ -1,0 +1,102 @@
+{
+  "task": "classification",
+  "run": "SMOKE_openai",
+  "split": "val",
+  "created": "2026-09-26 17:46:19 WIB",
+  "git": {
+    "head": "e6482c29f04da75c1e2f6130c9ce42132ac3cd18",
+    "dirty": true
+  },
+  "env": {
+    "cv2": "5.0.0",
+    "numpy": "2.4.4",
+    "python": "3.11.8"
+  },
+  "model": {
+    "kind": "openai",
+    "model_id": "gpt-6-sol",
+    "endpoint": "https://api.openai.com/v1",
+    "prompt_version": "v1",
+    "prompt_text": "The image shows one cocoa bean cut lengthwise (cut test). Classify its fermentation as exactly one of: fermented, poorly_fermented. Reply with JSON only, no other text: {\"label\": \"fermented\" or \"poorly_fermented\", \"confidence\": a number from 0 to 1}.",
+    "workers": 4,
+    "timeout_s": 60,
+    "retries": "up to 3 attempts on 408/429/5xx/network",
+    "input": "raw crop from the benchmark, background set to black with the segmenter mask, no colour gain, lossless PNG, native crop size (median 164x257 px)",
+    "price_usd_per_1m_tokens": [
+      2.0,
+      10.0
+    ],
+    "cost_note": "cost = tokens x configured price",
+    "latency_note": "wall time of all HTTP attempts and retry waits per bean; calls run in parallel, so per-bean latency is not throughput"
+  },
+  "benchmark": {
+    "id": "S0_csv_full",
+    "manifest_sha256": "a350a8cd8293a60cd23230ac574399637f77226465f6c7b1c6db4ebf266fe847",
+    "segment_py_sha256": "9248dacdc0ffc24094fcfa3528747a89797f34c98a7e09a309dbf1f4046943fc",
+    "built_at_git": "ddcfe0a35fd513aeb7fed15286970a9074d03c16",
+    "built": "2026-09-26 10:29:28 WIB"
+  },
+  "labels": {
+    "csv": "/home/ren-lie/cocoa/cocoa_grader/data/labels.csv",
+    "sha256": "753c4b4bca564168110a64ca0013fedf942e3b5c002dd3fa2e51b01f16c7936d",
+    "rule": "crop idx N = CSV idx N of the same photo; no matching to canon, no relabelling"
+  },
+  "code": {
+    "segment.py": {
+      "sha256": "9248dacdc0ffc24094fcfa3528747a89797f34c98a7e09a309dbf1f4046943fc",
+      "copy": "code_snapshot/segment.py"
+    },
+    "classify.py": {
+      "sha256": "5f9d8a83f36c98b6092cb2fbb136c47d3eeaadebf8a9b243bf9285d822e19644",
+      "copy": "code_snapshot/classify.py"
+    },
+    "config.py": {
+      "sha256": "20ebcca487d509f9ce09c6895b815b245467d5eb8a41ba206d78d3344573cb59",
+      "copy": "code_snapshot/config.py"
+    }
+  },
+  "code_notes": {
+    "segment.py": "same file that cut the benchmark crops",
+    "classify.py": "not used by this model",
+    "config.py": "not used by this model"
+  },
+  "n_beans": 20,
+  "excluded_photos": [],
+  "limit": 20,
+  "compare_to": null,
+  "summary": {
+    "n": 20,
+    "correct": 12,
+    "accuracy": 0.6,
+    "n_F": 15,
+    "tp_F": 12,
+    "recall_F": 0.8,
+    "precision_F": 0.7058823529411765,
+    "f1_F": 0.7500000000000001,
+    "n_PF": 5,
+    "tp_PF": 0,
+    "recall_PF": 0.0,
+    "precision_PF": 0.0,
+    "f1_PF": 0.0,
+    "balanced_accuracy": 0.4,
+    "invalid": 0,
+    "error": 0,
+    "confident_wrong": 2,
+    "latency_ms_mean": 2912.6950000000006,
+    "latency_ms_p50": 2798.0,
+    "latency_ms_p95": 5254.0,
+    "cost_usd": 0.024614,
+    "input_tokens": 2567,
+    "output_tokens": 1948,
+    "confusion": {
+      "F->F": 12,
+      "F->PF": 3,
+      "F->INV": 0,
+      "F->ERR": 0,
+      "PF->F": 5,
+      "PF->PF": 0,
+      "PF->INV": 0,
+      "PF->ERR": 0
+    }
+  }
+}

@@ -1,0 +1,35 @@
+stem,set,variant,sheet,idx,label,pred,correct,status,confidence,p_fermented,latency_ms,attempts,input_tokens,output_tokens,cost_usd,raw_output,error
+val_blur_1,val,blur,1,4,poorly_fermented,fermented,False,ok,0.9,,2274.3,1,1140,20,0.000392,"```json {""label"": ""fermented"", ""confidence"": 0.9} ```",
+val_blur_1,val,blur,1,6,poorly_fermented,fermented,False,ok,0.85,,3446.3,1,1165,21,0.000402,"```json {""label"": ""fermented"", ""confidence"": 0.85} ```",
+val_blur_1,val,blur,1,11,poorly_fermented,fermented,False,ok,0.85,,3477.7,1,1121,21,0.000389,"```json {""label"": ""fermented"", ""confidence"": 0.85} ```",
+val_blur_1,val,blur,1,12,poorly_fermented,fermented,False,ok,0.95,,1867.3,1,1140,21,0.000394,"```json {""label"": ""fermented"", ""confidence"": 0.95} ```",
+val_blur_2,val,blur,2,0,fermented,error,False,error,,,7300.3,3,,,,,"HTTP 429: {
+  ""error"": {
+    ""code"": 429,
+    ""message"": ""You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 15, model: gemini-3.5-flash-lite\nPlease retry in 7.378918263s."",
+    ""status"": ""RESOURCE_EXHAUSTED"",
+ "
+val_blur_2,val,blur,2,1,poorly_fermented,error,False,error,,,7234.5,3,,,,,"HTTP 429: {
+  ""error"": {
+    ""code"": 429,
+    ""message"": ""You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 15, model: gemini-3.5-flash-lite\nPlease retry in 7.027789392s."",
+    ""status"": ""RESOURCE_EXHAUSTED"",
+ "
+val_blur_2,val,blur,2,2,fermented,error,False,error,,,7388.3,3,,,,,"HTTP 429: {
+  ""error"": {
+    ""code"": 429,
+    ""message"": ""You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 15, model: gemini-3.5-flash-lite\nPlease retry in 6.077601922s."",
+    ""status"": ""RESOURCE_EXHAUSTED"",
+ "
+val_blur_2,val,blur,2,3,fermented,error,False,error,,,7909.2,3,,,,,"HTTP 429: {
+  ""error"": {
+    ""code"": 429,
+    ""message"": ""You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 15, model: gemini-3.5-flash-lite\nPlease retry in 5.366749265s."",
+    ""status"": ""RESOURCE_EXHAUSTED"",
+ "
+val_blur_2,val,blur,2,4,fermented,error,False,error,,,7591.8,3,,,,,"HTTP 429: {
+  ""error"": {
+    ""code"": 429,
+    ""message"": ""You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 15, model: gemini-3.5-flash-lite\nPlease retry in 59.761163492s."",
+    ""status"": ""RESOURCE_EXHAUSTED"",
+"
