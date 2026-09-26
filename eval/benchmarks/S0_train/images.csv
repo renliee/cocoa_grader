@@ -1,0 +1,9 @@
+stem,file,set,variant,sheet,sha256,source_w,source_h,target_w,detected,label_rows,count_ok,held
+train_canon_1,data/train/train_canon_1.jpeg,train,canon,1,fd43be189ff32a68d9b8883a8e6f7d25d85f2f3f6f3003a60a69e42214cb3f24,4000,3000,1600,15,15,True,
+train_canon_2,data/train/train_canon_2.jpeg,train,canon,2,009dfb38dbfd154f9700c84c152e2522e61d090af337131ec12cf187dff30b6a,4000,3000,1600,15,15,True,
+train_canon_3,data/train/train_canon_3.jpeg,train,canon,3,8c33188e3f2373c7fae926cac4e1e8ac177457f900366d9c69d6b9e41f16f94d,4000,3000,1600,15,15,True,
+train_canon_4,data/train/train_canon_4.jpeg,train,canon,4,3ca713f6c65878f34c7b649fa43c7702acead2b1da44b0d9ed341b20406bcf3d,4000,3000,1600,15,15,True,
+train_canon_5,data/train/train_canon_5.jpeg,train,canon,5,ebd5ca4c21f1ea602817dc8ea8cb3c35fc091226997af5b638142f9bd57222f8,4000,3000,1600,15,15,True,
+train_canon_6,data/train/train_canon_6.jpeg,train,canon,6,867709c2fd0726156ce000aaced7aaeb2749e3f187d83c3403cb6b68ac305f37,4000,3000,1600,15,15,True,
+train_canon_7,data/train/train_canon_7.jpeg,train,canon,7,509b670e885edc35fbc3aaddc2916169313936976f1d3923ccc01ddef8dca941,4000,3000,1600,15,15,True,
+train_canon_8,data/train/train_canon_8.jpeg,train,canon,8,f3ce6cbb0fbb34042df92efad0cde4fbe811da5a9c3e63458e0ba910ba08732f,4000,3000,1600,14,15,False,count mismatch
