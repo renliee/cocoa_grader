@@ -4,8 +4,13 @@ services:
     environment:
       KAKAO_WEIGHTS: /app/weights/best.pt
       YOLO_CONFIG_DIR: /tmp/ultralytics
+      KAKAO_DATA_DIR: /app/data
+      KAKAO_ALLOW_HTTP_COOKIES: "1"
+      KAKAO_PUBLIC_BASE_URL: ${KAKAO_PUBLIC_BASE_URL:-}
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - kakao_data:/app/data
     healthcheck:
       test: ["CMD", "python", "-c",
              "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
@@ -23,3 +28,6 @@ services:
       backend:
         condition: service_healthy
     restart: unless-stopped
+
+volumes:
+  kakao_data:

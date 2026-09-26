@@ -2,8 +2,8 @@
 
 Menghitung komposisi tingkat fermentasi satu lot biji kakao dari foto hasil *cut test*.
 
-Pengguna sasaran adalah tengkulak, titik pengumpulan pertama antara petani dan industri
-cokelat. Satu atau beberapa foto diunggah, tiap biji pada foto dipisahkan lalu
+Pengguna sasaran adalah pembeli dan pengolah kakao untuk pemeriksaan mutu lot masuk.
+Satu atau beberapa foto diunggah, tiap biji pada foto dipisahkan lalu
 diklasifikasi ke salah satu dari dua kelas: **Terfermentasi baik** atau
 **Kurang terfermentasi**. Hasilnya dilaporkan sebagai proporsi lot, bukan vonis per biji.
 
@@ -23,6 +23,41 @@ docker compose up --build -d
 ```
 
 Buka `http://localhost:8080`.   
+
+### Meninjau checkpoint saat ini tanpa Docker
+
+Jalankan dua terminal PowerShell dari folder repository. Terminal pertama menjalankan API dan SQLite lokal:
+
+```powershell
+py -m venv .venv
+.\.venv\Scripts\python -m pip install -r backend/requirements.txt
+.\.venv\Scripts\python backend/serve_local.py --port 8000
+```
+
+Terminal kedua menjalankan frontend dan meneruskan `/api/` ke backend:
+
+```powershell
+py frontend/serve.py --port 8081
+```
+
+Buka `http://127.0.0.1:8081`. Data tersimpan di `data/kakaolens.sqlite3` dan tetap ada sesudah server dimulai ulang. Instalasi dependensi CV dapat memakan waktu karena PyTorch. Alur **pilih/tambah pemasok → informasi lot → foto/precheck → tinjau sampel → klasifikasi → hasil → finalisasi** sudah aktif; Riwayat dan Pemasok memakai SQLite. Pemasok wajib, sedangkan berat dan catatan opsional. Hasil yang belum difinalisasi tetap menjadi draft. Tekan Ctrl+C pada kedua terminal untuk berhenti. Jika `.venv` sudah ada, lewati perintah pembuatan venv.
+
+Server lokal tidak memuat ulang kode Python secara otomatis. Setelah perubahan backend atau `frontend/serve.py`, hentikan dan jalankan ulang kedua server, lalu muat ulang browser dengan Ctrl+F5. Migrasi SQLite diterapkan saat backend mulai; jangan hapus folder `data` untuk memperbarui aplikasi.
+
+Status per nomor spesifikasi 1–82 ada di [docs/SPEC_COMPLIANCE.md](docs/SPEC_COMPLIANCE.md). Checkpoint dan prosedur uji manual ada di [docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md). Tata kelola hasil, arsip/penghapusan lot, analitik pemasok, dan uji QR pada dua perangkat masih menunggu fase berikutnya.
+
+Riwayat sekarang menyediakan **Revisi lot**: pilih lot final, periksa ulang sampel pada tahap 2, lalu simpan sebagai revisi berikutnya. Hasil lama tetap tersedia dan satu revisi dapat dipilih sebagai aktif. Dari Riwayat atau Detail Lot, **Ekspor laporan** membuka tautan digital per revisi, PDF, QR, dan label sederhana. Laporan digital memakai token acak dan dapat dibaca tanpa login; bagikan tautannya hanya kepada pihak yang boleh melihat hasil lot.
+
+Untuk demo QR pada ponsel lain, laptop dan ponsel harus berada di jaringan yang sama. Buka KakaoLens di laptop melalui alamat LAN-nya (misalnya `http://192.168.1.20:8080` untuk Compose atau port `8081` untuk server lokal). Tautan laporan dan QR memakai alamat tersebut secara otomatis. Server lokal juga mendeteksi alamat LAN ketika dibuka lewat `127.0.0.1`; frontend lokal menerima koneksi LAN secara default.
+
+Jika ada beberapa antarmuka jaringan, proxy publik, atau alamat otomatis tidak dapat dijangkau, tetapkan asal publik secara eksplisit sebelum menjalankan server, misalnya:
+
+```powershell
+$env:KAKAO_PUBLIC_BASE_URL = 'http://192.168.1.20:8080'
+docker compose up --build -d
+```
+
+Buka tautan hasil pindai dari ponsel. Pastikan port frontend dapat diakses dan jaringan Wi-Fi tidak mengisolasi perangkat. Saat memakai Compose dari `127.0.0.1`, buka ulang halaman melalui alamat LAN atau tetapkan variabel di atas; alamat antarmuka kontainer tidak dapat dipakai sebagai alamat ponsel. Mengubah alamat setelah mencetak label memerlukan pencetakan QR ulang.
 
 Build untuk pertama kalinya memakan waktu beberapa menit karena memasang PyTorch versi CPU. Kontainer
 frontend sengaja menunggu backend lolos healthcheck sebelum dijalankan, jadi halaman baru
@@ -104,7 +139,7 @@ bukan detektor biji kakao, sehingga bukan YOLO11n-cls yang menghasilkan kotak pe
 ### `POST /api/analyze`
 
 Multipart, field `files`, satu atau beberapa berkas gambar.
-Maksimal 40 berkas per permintaan, maksimal 10 MB per berkas.
+Maksimal 50 berkas per analisis, maksimal 10 MB per berkas.
 
 Bentuk respons:
 
@@ -214,3 +249,18 @@ agar pembaca bisa membedakan nilai yang sudah diuji dari nilai yang masih dugaan
 
 4. Timestamp pada log backend ditulis dalam WIB dengan offset tetap UTC+7, bukan mengikuti
 zona waktu kontainer.
+
+## Evaluation test suite
+
+Run from the repository root with the Python environment activated. Use `--task seg` for segmentation or `--task cls` for classification. Use `--split val` for validation and `--split test --final` only for the final test after model and parameter choices are fixed. Each run needs a unique `--run` ID.
+
+```bash
+python -m eval.run --task seg --split val --run SEG_example_val
+python -m eval.run --task cls --split val --model backend/weights/best.pt --run CLS_example_val
+python -m eval.run --task seg --split test --final --run SEG_example_test
+python -m eval.run --task cls --split test --final --model backend/weights/best.pt --run CLS_example_test
+```
+
+Results are saved under `eval/results/segmentation/<run>/` and `eval/results/classification/<run>/`, with reports, predictions, and run metadata. The combined final comparison is in `eval/results/final/`.
+
+App version: classifier FT_E, weights SHA256 `963200b87a498bff272d7ceecb79d2db67f28a7cfdf44feddb61b2ca13508e29`, `PAPER_WB_ENABLED = True`.

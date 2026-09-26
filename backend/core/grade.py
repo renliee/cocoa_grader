@@ -8,16 +8,20 @@ except ImportError:
     import config
 
 LABEL_ID = {
-    "fermented": "Terfermentasi baik",
-    "poorly_fermented": "Kurang terfermentasi",
+    "fermented": "Well fermented",
+    "poorly_fermented": "Poorly fermented",
 }
+DISCLAIMER = (
+    "Use these results to support quality assessment, "
+    "not as a substitute for standards-based testing. Other quality parameters "
+    "(mold, insect damage, foreign matter, and germination) are not assessed.")
  
 def count_labels(labels):
     """Count beans per class. Unknown labels will be raise (just for safeguard)."""
     counts = {c: 0 for c in config.CLASS_NAMES}
     for i, lab in enumerate(labels):
         if lab not in counts:
-            raise ValueError(f"label tidak dikenal pada indeks {i}: {lab!r}")
+            raise ValueError(f"unknown label at index {i}: {lab!r}")
         counts[lab] += 1
     return counts
 
@@ -41,16 +45,16 @@ def grade(labels, n_unreadable=0, n_photos=1):
     """
     n = len(labels)
     if n == 0:
-        raise ValueError(f"tidak ada biji terbaca dari {n_unreadable} terdeteksi")
+        raise ValueError(f"No usable beans among {n_unreadable} detected candidates")
     
     counts = count_labels(labels)
     persen = percentages(counts, n)
  
     catatan = []
     if n < config.MIN_SAMPLE_FULL:
-        catatan.append(f"Sampel {n} biji, di bawah acuan uji belah ({config.MIN_SAMPLE_FULL} biji). Persentase bersifat indikatif.")
+        catatan.append(f"The sample contains {n} beans, below the cut-test reference of {config.MIN_SAMPLE_FULL}. Percentages are indicative.")
     if n_unreadable:
-        catatan.append(f"{n_unreadable} biji terdeteksi tapi tidak terbaca, tidak masuk hitungan di atas.")
+        catatan.append(f"{n_unreadable} detected candidates were excluded from the counts above.")
 
     return {
         "n_terbaca": n,
@@ -59,10 +63,7 @@ def grade(labels, n_unreadable=0, n_photos=1):
         "jumlah": counts,
         "persen": persen,
         "catatan": catatan,
-        "disclaimer": (
-            "Gunakan hasil ini sebagai informasi pendukung penilaian mutu, "
-            "bukan pengganti pengujian sesuai standar. Parameter mutu lain "
-            "(berjamur, berserangga, kotoran, berkecambah) tidak dinilai."),
+        "disclaimer": DISCLAIMER,
     }
 
 
@@ -70,7 +71,7 @@ def format_report(h): #h is the dict returned by grade()
     """Converting dict from grade() to text. Seperated because we want to test grade() without checking the exact string format."""
 
     #out is a list of strings, joined with newlines at the end
-    out = [f"{h['n_terbaca']} biji dianalisis ({h['n_foto']} foto)", ""]
+    out = [f"{h['n_terbaca']} beans analyzed ({h['n_foto']} photos)", ""]
 
     w = max(len(v) for v in LABEL_ID.values()) + 2 #count the longest lable and add it with number 2.
     for c in config.CLASS_NAMES:

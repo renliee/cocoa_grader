@@ -15,9 +15,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 #copy the source code below to the backend container
 COPY core/ ./core/
 COPY main.py .
+COPY db.py domain.py presentation.py reports.py security.py schemas.py storage.py workflow.py ./
+COPY migrations/ ./migrations/
+COPY assets/ ./assets/
 COPY weights/ ./weights/
 
 RUN mkdir -p /tmp/ultralytics && chmod 777 /tmp/ultralytics
+RUN mkdir -p /app/data
 
 EXPOSE 8000
 

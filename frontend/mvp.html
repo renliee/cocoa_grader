@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KakaoLens</title>
+<style>
+  :root {
+    --paper: #f7f5ef;
+    --ink: #1c1b18;
+    --muted: #5c574c;
+    --rule: #d8d2c2;
+    --green: #2f6b4a;
+    --red: #96371f;
+    --alert-ink: #6e2712;
+    --alert-bg: #f5e1da;
+    /* exact colors drawn by backend/main.py _annotate(), legend colors must match these precisely */
+    --anot-green: #00c800;
+    --anot-red: #ff0000;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 2.6rem 1.4rem 4rem;
+    line-height: 1.55;
+    font-size: 16px;
+    overflow-wrap: break-word;
+    overflow-x: hidden;
+  }
+
+  .sr-only {
+    position: absolute; width: 1px; height: 1px;
+    padding: 0; margin: -1px; overflow: hidden;
+    clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+  }
+
+  h1 {
+    font-family: ui-serif, Georgia, "Iowan Old Style", "Times New Roman", serif;
+    font-size: 2.15rem;
+    font-weight: 600;
+    letter-spacing: -.01em;
+    margin: 0 0 .35rem;
+  }
+  .sub {
+    color: var(--muted);
+    font-size: 1.02rem;
+    margin: 0 0 2.1rem;
+  }
+
+  /* View A (inserting  lot information) */
+  #view-a { max-width: 40ch; }
+  .label-lot {
+    display: block;
+    font-size: .92rem;
+    font-weight: 600;
+    margin-bottom: .5rem;
+  }
+  input#nama-lot {
+    width: 100%;
+    font-size: 1.05rem;
+    padding: .72rem .8rem;
+    border: 1px solid var(--ink);
+    background: var(--paper);
+    color: var(--ink);
+    font-family: inherit;
+    margin-bottom: 1.1rem;
+  }
+  input#nama-lot:focus-visible { outline: 2px solid var(--green); outline-offset: 1px; }
+
+  button#lanjut {
+    padding: .72rem 1.6rem;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: .01em;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    cursor: pointer;
+  }
+  button#lanjut:hover:not(:disabled) { background: var(--green); }
+  button#lanjut:disabled { opacity: .4; cursor: not-allowed; }
+
+  /* View B (uploading photo and analysis results) */
+  #header-lot {
+    font-family: ui-serif, Georgia, serif;
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin: 0 0 1.3rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .petunjuk {
+    color: var(--muted);
+    font-size: .95rem;
+    margin: 0 0 1.6rem;
+  }
+
+  .unggah {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .9rem;
+    margin-bottom: .3rem;
+  }
+
+  label.pilih-file {
+    display: inline-block;
+    padding: .68rem 1.1rem;
+    border: 1px solid var(--ink);
+    font-size: .95rem;
+    font-weight: 500;
+    cursor: pointer;
+    background: transparent;
+    color: var(--ink);
+  }
+  label.pilih-file:hover { background: var(--ink); color: var(--paper); }
+  input#files:focus-visible + label.pilih-file { outline: 2px solid var(--green); outline-offset: 2px; }
+
+  #nama-file-terpilih {
+    color: var(--muted);
+    font-size: .9rem;
+    flex: 1 1 auto;
+  }
+
+  #daftar-foto-dipilih {
+    list-style: none;
+    padding: 0;
+    margin: .5rem 0 1.6rem;
+    font-size: .85rem;
+    color: var(--muted);
+  }
+  #daftar-foto-dipilih li { margin: .2rem 0; }
+
+  .checklist {
+    border: 1px solid var(--rule);
+    padding: 1rem 1.2rem;
+    margin: 0 0 1.6rem;
+  }
+  .checklist-judul {
+    font-weight: 600;
+    font-size: .92rem;
+    margin: 0 0 .5rem;
+  }
+  .checklist ul {
+    margin: 0;
+    padding-left: 1.1rem;
+    font-size: .9rem;
+    color: var(--muted);
+  }
+  .checklist li { margin: .3rem 0; }
+
+  .validasi-error {
+    color: var(--red);
+    font-weight: 600;
+    font-size: .92rem;
+    margin: 0 0 1rem;
+    display: none;
+  }
+
+  .tombol-aksi {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .8rem;
+    padding-bottom: 1.7rem;
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: .3rem;
+  }
+
+  button#kirim {
+    padding: .72rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: .01em;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    cursor: pointer;
+  }
+  button#kirim:hover:not(:disabled) { background: var(--green); }
+  button#kirim:disabled { opacity: .45; cursor: wait; }
+
+  button#hapus-semua {
+    padding: .72rem 1.3rem;
+    font-size: .95rem;
+    font-weight: 500;
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--rule);
+    cursor: pointer;
+  }
+  button#hapus-semua:hover { border-color: var(--ink); color: var(--ink); }
+
+  #status-memuat { display: none; margin: 1.4rem 0; }
+  #teks-memuat { font-size: .95rem; color: var(--muted); margin: 0; }
+
+  #area-hasil { margin-top: 2.2rem; }
+
+  .peringatan {
+    background: var(--alert-bg);
+    border-left: 3px solid var(--alert-ink);
+    padding: 1rem 1.1rem;
+    margin: 0 0 1.8rem;
+  }
+  .peringatan p {
+    display: flex;
+    align-items: flex-start;
+    gap: .6rem;
+    margin: .5rem 0;
+    font-weight: 600;
+    color: var(--alert-ink);
+    font-size: .98rem;
+  }
+  .peringatan .tanda {
+    flex-shrink: 0;
+    width: 1.1rem; height: 1.1rem;
+    border: 1.5px solid var(--alert-ink);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .72rem;
+    margin-top: .1rem;
+  }
+
+  section#hasil-utama { display: none; }
+  #header-hasil {
+    font-family: ui-serif, Georgia, serif;
+    font-size: 1.2rem;
+    font-weight: 500;
+    color: var(--muted);
+    margin: 0 0 .4rem;
+  }
+
+  .baris-kelas {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: .95rem 0;
+    border-top: 1px solid var(--rule);
+  }
+  .baris-kelas:last-of-type { border-bottom: 1px solid var(--rule); }
+  .nama-kelas { font-size: 1.05rem; font-weight: 500; }
+  .angka-kelas {
+    font-family: ui-serif, Georgia, serif;
+    font-size: 2.5rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .persen-kelas { font-size: 1rem; color: var(--muted); margin-left: .5rem; }
+  .baris-kelas.fermented .angka-kelas { color: var(--green); }
+  .baris-kelas.poorly_fermented .angka-kelas { color: var(--red); }
+
+  .bar-proporsi {
+    display: flex;
+    height: 6px;
+    background: var(--rule);
+    margin: 1.2rem 0 1.5rem;
+  }
+  .isi-fermented { background: var(--green); }
+  .isi-poorly { background: var(--red); }
+
+  #info-sampel {
+    display: none;
+    margin-top: 1.6rem;
+    font-size: .85rem;
+    color: var(--muted);
+  }
+  #info-sampel p { margin: .5rem 0; }
+  #info-jumlah-dianalisis { font-weight: 600; color: var(--ink); }
+
+  section#galeri { display: none; margin-top: 2.8rem; padding-top: 1.7rem; border-top: 1px solid var(--rule); }
+  .galeri-judul {
+    font-size: .8rem;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--muted);
+    margin: 0 0 1.1rem;
+  }
+  .gambar-wrap {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    touch-action: pan-y;
+  }
+  .gambar-wrap img {
+    max-width: 100%;
+    min-width: 0;
+    flex: 1 1 auto;
+    height: auto;
+    border: 1px solid var(--rule);
+    display: block;
+    margin: 0 auto;
+  }
+  .nav-foto {
+    flex-shrink: 0;
+    width: 2.2rem; height: 2.2rem;
+    border: 1px solid var(--ink);
+    background: transparent;
+    color: var(--ink);
+    font-size: 1.1rem;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .nav-foto:hover:not(:disabled) { background: var(--ink); color: var(--paper); }
+  .nav-foto:disabled { opacity: .3; cursor: default; }
+
+  #posisi-foto {
+    text-align: center;
+    font-size: .78rem;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: .9rem 0 0;
+  }
+  #nama-foto {
+    text-align: center;
+    font-size: .92rem;
+    font-weight: 500;
+    margin: .5rem 0 .1rem;
+    word-break: break-word;
+  }
+  .legenda {
+    text-align: center;
+    font-size: .85rem;
+    color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: .35rem 1.1rem;
+    margin: .9rem 0 .2rem;
+  }
+  .kotak {
+    display: inline-block;
+    width: .7rem; height: .7rem;
+    margin-right: .35rem;
+    vertical-align: -1px;
+    border: 1px solid rgba(0,0,0,.35);
+  }
+  .kotak.hijau { background: var(--anot-green); }
+  .kotak.merah { background: var(--anot-red); }
+
+  #catatan-curiga {
+    display: none;
+    text-align: center;
+    font-size: .88rem;
+    font-weight: 600;
+    color: var(--alert-ink);
+    margin: .9rem auto 0;
+    max-width: 46ch;
+  }
+
+  #catatan-rincian {
+    display: none;
+    text-align: center;
+    font-size: .85rem;
+    color: var(--muted);
+    margin: .6rem auto 0;
+    max-width: 46ch;
+  }
+
+  #disclaimer {
+    display: none;
+    margin-top: 2.8rem;
+    padding-top: 1.3rem;
+    border-top: 1px solid var(--rule);
+    font-size: .82rem;
+    color: var(--muted);
+  }
+
+  button#lot-baru {
+    display: none;
+    margin-top: 2.4rem;
+    padding: .72rem 1.5rem;
+    font-size: .95rem;
+    font-weight: 600;
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--ink);
+    cursor: pointer;
+  }
+  button#lot-baru:hover { background: var(--ink); color: var(--paper); }
+</style>
+</head>
+<body>
+
+<h1>KakaoLens</h1>
+<p class="sub">Indicative cocoa fermentation analysis from <em>cut test</em>.</p>
+
+<div id="view-a">
+  <label class="label-lot" for="nama-lot">Lot name or ID</label>
+  <input type="text" id="nama-lot" placeholder="Example: Belitung lot, 12 August" autocomplete="off">
+  <div>
+    <button id="lanjut" disabled>Next</button>
+  </div>
+</div>
+
+<div id="view-b" style="display:none">
+  <h2 id="header-lot"></h2>
+
+  <p class="petunjuk">
+    Upload multiple photos to represent one lot.
+    Results from all photos are combined to show the lot’s fermentation composition.
+  </p>
+
+  <div class="unggah">
+    <input type="file" id="files" accept="image/*" multiple class="sr-only">
+    <label for="files" class="pilih-file">Choose photos</label>
+    <span id="nama-file-terpilih">No photos selected</span>
+  </div>
+  <ul id="daftar-foto-dipilih"></ul>
+
+  <div class="checklist">
+    <p class="checklist-judul">Before uploading:</p>
+    <ul>
+      <li>Make sure the bean interiors or cotyledons are clearly visible</li>
+      <li>Use adequate, even lighting</li>
+      <li>Leave space between beans so they do not touch or overlap</li>
+      <li>Take a close photo so beans are clearly visible and remain within the frame</li>
+      <li>Use a plain, matte white background such as HVS paper or kitchen paper, without patterns or writing</li>
+      <li>Use a cut-test sample</li>
+    </ul>
+  </div>
+
+  <p class="validasi-error" id="validasi-error" role="alert"></p>
+
+  <div class="tombol-aksi">
+    <button id="kirim">Analyze</button>
+    <button id="hapus-semua">Delete all photos</button>
+  </div>
+
+  <div id="status-memuat">
+    <p id="teks-memuat"></p>
+  </div>
+
+  <div id="area-hasil">
+    <div id="blocking-container"></div>
+
+    <section id="hasil-utama">
+      <h2 id="header-hasil"></h2>
+
+      <div id="baris-fermented" class="baris-kelas fermented">
+        <span class="nama-kelas" id="nama-fermented"></span>
+        <span><span class="angka-kelas" id="angka-fermented"></span><span class="persen-kelas" id="persen-fermented"></span></span>
+      </div>
+      <div id="baris-poorly" class="baris-kelas poorly_fermented">
+        <span class="nama-kelas" id="nama-poorly"></span>
+        <span><span class="angka-kelas" id="angka-poorly"></span><span class="persen-kelas" id="persen-poorly"></span></span>
+      </div>
+
+      <div class="bar-proporsi">
+        <div class="isi-fermented" id="bar-fermented"></div>
+        <div class="isi-poorly" id="bar-poorly"></div>
+      </div>
+    </section>
+
+    <div id="info-sampel">
+      <p id="info-jumlah-dianalisis"></p>
+      <p>This sample is smaller than the 300-bean sampling reference in SNI 2323:2008. Smaller samples may be less representative of the whole lot.</p>
+      <p>The percentages are indicative and describe the successfully analyzed sample.</p>
+      <p id="info-tidak-terbaca"></p>
+    </div>
+
+    <section id="galeri">
+      <p class="galeri-judul">Detection results</p>
+      <div class="gambar-wrap">
+        <button class="nav-foto" id="foto-sebelumnya" aria-label="Previous photo">&#8249;</button>
+        <img id="foto-img" alt="Annotated cut-test photo">
+        <button class="nav-foto" id="foto-berikutnya" aria-label="Next photo">&#8250;</button>
+      </div>
+      <p id="posisi-foto"></p>
+      <p id="nama-foto"></p>
+      <p class="legenda" id="legenda">
+        <span><span class="kotak hijau"></span><span id="legenda-hijau-label"></span></span>
+        <span><span class="kotak merah"></span><span id="legenda-merah-label"></span></span>
+      </p>
+      <p id="catatan-curiga"></p>
+      <p id="catatan-rincian"></p>
+    </section>
+
+    <footer id="disclaimer"></footer>
+
+    <button id="lot-baru">New lot analysis</button>
+  </div>
+</div>
+
+<script>
+const el = (id) => document.getElementById(id);
+
+//mirrors the server's own upload limits, so bad input is caught before a slow upload starts
+const MAX_FILES = 10;
+const MAX_FILE_BYTES = 12 * 1024 * 1024;
+const MAX_TOTAL_BYTES = 60 * 1024 * 1024;
+
+//response shape carries no display labels, so this is the one place the wording lives
+const LABEL_ID = { fermented: "Well fermented", poorly_fermented: "Poorly fermented" };
+el("legenda-hijau-label").textContent = LABEL_ID.fermented;
+el("legenda-merah-label").textContent = LABEL_ID.poorly_fermented;
+
+let namaLot = "";
+let fotoArray = [];
+let perFotoData = [];
+let indeksFoto = 0;
+
+//Switch from lot name input view (View A) to photo upload view (View B)
+
+el("nama-lot").addEventListener("input", () => {
+  el("lanjut").disabled = el("nama-lot").value.trim().length === 0;
+});
+
+el("lanjut").onclick = () => {
+  namaLot = el("nama-lot").value.trim();
+  if (!namaLot) return;
+  el("header-lot").textContent = `Lot: ${namaLot}`;
+  el("view-a").style.display = "none";
+  el("view-b").style.display = "block";
+};
+
+//file selection (persistent array, append only)
+
+function renderDaftarFoto() {
+  const label = el("nama-file-terpilih");
+  const daftar = el("daftar-foto-dipilih");
+  daftar.innerHTML = "";
+  if (!fotoArray.length) {
+    label.textContent = "No photos selected";
+    return;
+  }
+  label.textContent = `${fotoArray.length} photos selected`;
+  for (const f of fotoArray) {
+    const li = document.createElement("li");
+    li.textContent = f.name;
+    daftar.appendChild(li);
+  }
+}
+
+el("files").addEventListener("change", () => {
+  for (const f of el("files").files) fotoArray.push(f);
+  el("files").value = ""; //clear native picker so the same file can be re-added and change fires again
+  if (el("hasil-utama").style.display === "block") sembunyikanHasil();
+  renderDaftarFoto();
+});
+
+el("hapus-semua").onclick = () => {
+  fotoArray = [];
+  el("files").value = "";
+  renderDaftarFoto();
+  el("validasi-error").style.display = "none";
+};
+
+function validasiFile(files) {
+  if (!files.length) return "Select at least one photo first.";
+  if (files.length > MAX_FILES) return `Maximum ${MAX_FILES} photos per upload; ${files.length} selected.`;
+  let total = 0;
+  for (const f of files) {
+    if (f.size > MAX_FILE_BYTES) return `'${f.name}' exceeds ${MAX_FILE_BYTES / (1024 * 1024)} MB.`;
+    total += f.size;
+  }
+  if (total > MAX_TOTAL_BYTES) return `The total photo size (${(total / (1024 * 1024)).toFixed(1)} MB) exceeds the ${MAX_TOTAL_BYTES / (1024 * 1024)} MB limit.`;
+  return null;
+}
+
+//render the result
+
+function sembunyikanHasil() {
+  el("blocking-container").innerHTML = "";
+  el("hasil-utama").style.display = "none";
+  el("info-sampel").style.display = "none";
+  el("galeri").style.display = "none";
+  el("disclaimer").style.display = "none";
+  el("lot-baru").style.display = "none";
+}
+
+function tampilkanBlocking(daftar) {
+  const wrap = el("blocking-container");
+  wrap.innerHTML = "";
+  if (!daftar || !daftar.length) return;
+  const blok = document.createElement("div");
+  blok.className = "peringatan";
+  for (const pesan of daftar) {
+    const p = document.createElement("p");
+    const tanda = document.createElement("span");
+    tanda.className = "tanda";
+    tanda.textContent = "!";
+    tanda.setAttribute("aria-hidden", "true");
+    const teks = document.createElement("span");
+    teks.textContent = pesan; //server supplied text, we dont use innerHTML
+    p.append(tanda, teks);
+    blok.appendChild(p);
+  }
+  wrap.appendChild(blok);
+}
+
+function tampilkanHasil(ringkasan) {
+  el("header-hasil").textContent = `Results: ${namaLot}, ${ringkasan.n_foto} photos`;
+
+  const jumlah = ringkasan.jumlah;
+  const persen = ringkasan.persen;
+
+  el("nama-fermented").textContent = LABEL_ID.fermented;
+  el("angka-fermented").textContent = jumlah.fermented;
+  el("persen-fermented").textContent = `(${persen.fermented}%)`;
+
+  el("nama-poorly").textContent = LABEL_ID.poorly_fermented;
+  el("angka-poorly").textContent = jumlah.poorly_fermented;
+  el("persen-poorly").textContent = `(${persen.poorly_fermented}%)`;
+
+  el("bar-fermented").style.width = persen.fermented + "%";
+  el("bar-poorly").style.width = persen.poorly_fermented + "%";
+
+  el("hasil-utama").style.display = "block";
+
+  el("info-jumlah-dianalisis").textContent = `Beans analyzed: ${ringkasan.n_terbaca}`;
+  const infoTidakTerbaca = el("info-tidak-terbaca");
+  if (ringkasan.n_tidak_terbaca > 0) {
+    infoTidakTerbaca.textContent = `${ringkasan.n_tidak_terbaca} detected objects were excluded because they did not meet the analysis criteria.`;
+    infoTidakTerbaca.style.display = "block";
+  } else {
+    infoTidakTerbaca.style.display = "none";
+  }
+  el("info-sampel").style.display = "block";
+
+  el("disclaimer").textContent = ringkasan.disclaimer;
+  el("disclaimer").style.display = "block";
+}
+
+function tampilkanFoto(i) {
+  const f = perFotoData[i];
+  el("foto-img").src = "data:image/jpeg;base64," + f.gambar;
+  el("nama-foto").textContent = f.nama;
+
+  const banyak = perFotoData.length;
+  const adaBeberapa = banyak > 1;
+  el("posisi-foto").style.display = adaBeberapa ? "block" : "none";
+  el("foto-sebelumnya").style.display = adaBeberapa ? "flex" : "none";
+  el("foto-berikutnya").style.display = adaBeberapa ? "flex" : "none";
+  if (adaBeberapa) el("posisi-foto").textContent = `Photo ${i + 1} / ${banyak}`;
+
+  el("foto-sebelumnya").disabled = i === 0;
+  el("foto-berikutnya").disabled = i === banyak - 1;
+
+  const curiga = el("catatan-curiga");
+  if (f.segmentasi_curiga) {
+    curiga.textContent = "Review this photo’s results; some beans may not have been counted.";
+    curiga.style.display = "block";
+  } else {
+    curiga.style.display = "none";
+  }
+
+  //every photo cause breakdown: kena_tepi/gumpalan/serpihan are never counted here,
+  //only explained, the aggregate unreadable count is shown separately in #info-tidak-terbaca.
+  const rincian = el("catatan-rincian");
+  const bagian = [];
+  if (f.kena_tepi) bagian.push(`${f.kena_tepi} objects cut off at the image edge`);
+  if (f.gumpalan) bagian.push(`${f.gumpalan} objects appear joined or overlapping`);
+  if (f.serpihan) bagian.push(`${f.serpihan} objects identified as debris or fragments`);
+  if (bagian.length) {
+    rincian.textContent = `In this photo: ${bagian.join(", ")}.`;
+    rincian.style.display = "block";
+  } else {
+    rincian.style.display = "none";
+  }
+}
+
+function gantiFoto(delta) {
+  const baru = indeksFoto + delta;
+  if (baru < 0 || baru >= perFotoData.length) return;
+  indeksFoto = baru;
+  tampilkanFoto(indeksFoto);
+}
+
+el("foto-sebelumnya").onclick = () => gantiFoto(-1);
+el("foto-berikutnya").onclick = () => gantiFoto(1);
+
+//swipe support for touch screens; the buttons above remain the primary control
+let sentuhMulaiX = null;
+const wrapGambar = document.querySelector(".gambar-wrap");
+wrapGambar.addEventListener("touchstart", (e) => { sentuhMulaiX = e.touches[0].clientX; });
+wrapGambar.addEventListener("touchend", (e) => {
+  if (sentuhMulaiX === null) return;
+  const delta = e.changedTouches[0].clientX - sentuhMulaiX;
+  if (Math.abs(delta) > 40) gantiFoto(delta < 0 ? 1 : -1);
+  sentuhMulaiX = null;
+});
+
+function tampilkanGaleri(daftarFoto) {
+  perFotoData = daftarFoto;
+  indeksFoto = 0;
+  if (!perFotoData.length) {
+    el("galeri").style.display = "none";
+    return;
+  }
+  tampilkanFoto(0);
+  el("galeri").style.display = "block";
+}
+
+async function ambilPesanKesalahan(res) {
+  try {
+    const data = await res.json();
+    if (data && data.detail) return data.detail;
+  } catch (e) {
+    //response body isn't JSON, e.g. nginx's own 413 page
+  }
+  if (res.status === 413) return "The upload is too large. Reduce the number or size of the photos.";
+  return `Unable to process the request (status ${res.status}).`;
+}
+
+el("kirim").onclick = async () => {
+  const pesanValidasi = validasiFile(fotoArray);
+  const kotakValidasi = el("validasi-error");
+
+  if (pesanValidasi) {
+    kotakValidasi.textContent = pesanValidasi;
+    kotakValidasi.style.display = "block";
+    return;
+  }
+  kotakValidasi.style.display = "none";
+
+  const fd = new FormData();
+  for (const f of fotoArray) fd.append("files", f); //append in a loop, not set, or only one file survives
+
+  sembunyikanHasil();
+  const tombolKirim = el("kirim");
+  tombolKirim.disabled = true;
+  tombolKirim.textContent = "Analyzing…";
+  el("teks-memuat").textContent = `Processing ${fotoArray.length} photos…`;
+  el("status-memuat").style.display = "block";
+
+  try {
+    //no client side timeout: nginx allows 300s per request for CPU inference
+    const res = await fetch("/api/analyze", { method: "POST", body: fd });
+
+    if (!res.ok) {
+      tampilkanBlocking([await ambilPesanKesalahan(res)]);
+      return;
+    }
+
+    const data = await res.json();
+    tampilkanBlocking(data.blocking_warning);
+    tampilkanHasil(data.ringkasan);
+    tampilkanGaleri(data.per_foto);
+    el("lot-baru").style.display = "inline-block";
+    el("hasil-utama").scrollIntoView({ behavior: "smooth" });
+
+  } catch (e) {
+    tampilkanBlocking(["Unable to connect to the server: " + e.message]);
+  } finally {
+    el("status-memuat").style.display = "none";
+    tombolKirim.disabled = false;
+    tombolKirim.textContent = "Analyze";
+  }
+};
+
+//reset back to View A
+
+el("lot-baru").onclick = () => {
+  namaLot = "";
+  fotoArray = [];
+  perFotoData = [];
+  indeksFoto = 0;
+
+  el("nama-lot").value = "";
+  el("lanjut").disabled = true;
+  el("files").value = "";
+  renderDaftarFoto();
+  el("validasi-error").style.display = "none";
+  sembunyikanHasil();
+
+  el("view-b").style.display = "none";
+  el("view-a").style.display = "block";
+};
+</script>
+
+</body>
+</html>

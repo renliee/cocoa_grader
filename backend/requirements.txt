@@ -2,6 +2,10 @@
 fastapi==0.141.1
 uvicorn[standard]==0.52.1
 python-multipart==0.0.32
+argon2-cffi==25.1.0
+tzdata==2026.2
+reportlab==5.0.1
+qrcode[pil]==8.2
 
 #using opencv python (not headless) because ultralytics requires it. Installing both writes to the same cv2/ dir.
 opencv-python==5.0.0.93

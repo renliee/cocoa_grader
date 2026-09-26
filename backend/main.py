@@ -13,12 +13,34 @@ import time
 from contextlib import asynccontextmanager
 from typing import Annotated, List
 
-import cv2
-import numpy as np
-from fastapi import FastAPI, File, HTTPException, UploadFile as _UploadFile
-from fastapi.middleware.cors import CORSMiddleware
+try:
+    import cv2
+    import numpy as np
+except ModuleNotFoundError:
+    if os.environ.get('KAKAO_SKIP_MODEL_LOAD') != '1':
+        raise
+    cv2 = None
+    np = None
+from fastapi import Depends, FastAPI, File, Header, HTTPException, Request, Response, UploadFile as _UploadFile
+from fastapi.responses import JSONResponse
 from pydantic import WithJsonSchema
-from core import classify, config, grade, segment
+from core import config, grade
+from db import migrate
+import domain
+import reports
+import security
+from schemas import SignupIn, LoginIn, ProfilePatch, SupplierIn, SupplierPatch, LotIn, DraftPatch, PhotoReview, ExpectedInput, AnalyzeIn, FinalizeIn, LotVersionIn
+from storage import delete_photo_assets
+
+if os.environ.get('KAKAO_SKIP_MODEL_LOAD') != '1':
+    from core import classify, segment
+else:
+    classify = segment = None
+
+if cv2 is not None:
+    import workflow
+else:
+    workflow = None
 
 #fix Swagger's file upload button for newer FastAPI versions, Without this, /docs wont show the file picker
 UploadFile = Annotated[_UploadFile, WithJsonSchema({"type": "string", "format": "binary"})]
@@ -26,7 +48,7 @@ UploadFile = Annotated[_UploadFile, WithJsonSchema({"type": "string", "format": 
 WEIGHTS_PATH = os.environ.get("KAKAO_WEIGHTS", "weights/best.pt") #update: can receive env variables from docker
 
 #upload limits and max picture size of the FastAPI
-MAX_FILES = 40
+MAX_FILES = 50
 MAX_FILE_BYTES = 10 * 1024 * 1024
 
 #annotated photo returned to the browser. 1280 keeps labels readable in a screen recording, base64 inflates the payload by a third.
@@ -38,9 +60,10 @@ LOG_FORMAT = "%(asctime)s %(levelname)-7s %(name)s | %(message)s"
 DATE_FORMAT = "%H:%M:%S"
 
 class _SkipHealth(logging.Filter):
-    """Drop the docker healthcheck from the access log because it fires every 10s and would cover up the real request lines."""
+    """Omit repetitive health checks and bearer report tokens from access logs."""
     def filter(self, record):
-        return "/api/health" not in record.getMessage()
+        message = record.getMessage()
+        return '/api/health' not in message and '/api/reports/' not in message
 
 
 def _setup_logging():
@@ -75,35 +98,362 @@ async def lifespan(app: FastAPI):
     Load the classifier model once at startup (fast failure always better than silent failure).
     Loading per request would add seconds of latency to every call and would also delay a class name mismatch until a user hits the endpoint. 
     """
-    t0 = time.perf_counter() #track the time before loading the model (to count the ms later)
-    _model["clf"] = classify.load_model(WEIGHTS_PATH)
-    #report the classes the loaded model actually carries, not the ones config expects, so the line is evidence rather than an echo
-    names = _model["clf"].names
-    log.info("model dimuat: %s | kelas %s | %.0f ms", WEIGHTS_PATH, tuple(names[i] for i in sorted(names)), 1000 * (time.perf_counter() - t0))
+    migrate()
+    if classify is not None:
+        t0 = time.perf_counter() #track the time before loading the model (to count the ms later)
+        _model["clf"] = classify.load_model(WEIGHTS_PATH)
+        #report the classes the loaded model actually carries, not the ones config expects, so the line is evidence rather than an echo
+        names = _model["clf"].names
+        log.info("model dimuat: %s | kelas %s | %.0f ms", WEIGHTS_PATH, tuple(names[i] for i in sorted(names)), 1000 * (time.perf_counter() - t0))
+    if workflow is not None:
+        workflow.start_worker(_model.get('clf'))
+    reports.start_worker()
     yield
+    reports.stop_worker()
+    if workflow is not None:
+        workflow.stop_worker()
     _model.clear() #clear model on shutdown
     log.info("model dilepas, backend berhenti")
 
 
 app = FastAPI(
     title="KakaoLens API",
-    description="Klasifikasi tingkat fermentasi biji kakao dari foto nampan.",
+    description="Classify cocoa bean fermentation from tray photos.",
     lifespan=lifespan,
 )
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["POST", "GET"],
-    allow_headers=["*"],
-)
+# Authenticated routes are served through the same-origin frontend proxy.
+
+
+def _origin_ok(request: Request):
+    origin = request.headers.get('origin')
+    if origin:
+        from urllib.parse import urlsplit
+        parsed = urlsplit(origin)
+        expected_scheme = request.headers.get('x-forwarded-proto', request.url.scheme)
+        if parsed.scheme != expected_scheme or parsed.netloc.lower() != request.headers.get('host', '').lower():
+            raise HTTPException(403, 'This request origin is not allowed.')
+
+
+def _report_origin(request: Request):
+    scheme = request.headers.get('x-forwarded-proto', request.url.scheme)
+    if scheme not in ('http', 'https'):
+        raise HTTPException(400, 'Invalid request protocol.')
+    return f"{scheme}://{request.headers.get('host', '')}"
+
+
+def _current(request: Request):
+    session = security.get_session(request.cookies.get('kl_session'))
+    if not session:
+        raise HTTPException(401, 'Please sign in again.')
+    return session
+
+
+def _write(request: Request, session=Depends(_current)):
+    _origin_ok(request)
+    if not security.check_csrf(session, request.headers.get('x-csrf-token')):
+        raise HTTPException(403, 'Your security session has changed. Refresh the page.')
+    return session
+
+
+def _session_response(request: Request, user):
+    token, csrf = security.create_session(user['id'])
+    response = JSONResponse({'user': user, 'csrf_token': csrf})
+    response.set_cookie('kl_session', token, httponly=True, samesite='lax',
+                        secure=os.environ.get('KAKAO_ALLOW_HTTP_COOKIES') != '1',
+                        max_age=security.SESSION_DAYS * 86400, path='/')
+    return response
+
+
+@app.exception_handler(domain.DomainError)
+async def domain_error(_request: Request, exc: domain.DomainError):
+    return JSONResponse({'detail': str(exc)}, status_code=exc.status)
+
+
+@app.post('/api/auth/signup')
+def signup(request: Request, body: SignupIn):
+    _origin_ok(request)
+    if body.password != body.password_confirmation:
+        raise HTTPException(400, 'Passwords do not match.')
+    return _session_response(request, domain.signup(body.display_name, body.login, body.password))
+
+
+@app.post('/api/auth/login')
+def login(request: Request, body: LoginIn):
+    _origin_ok(request)
+    return _session_response(request, domain.login(body.login, body.password))
+
+
+@app.get('/api/auth/me')
+def me(session=Depends(_current)):
+    return {'user': {key: session[key] for key in ('id', 'login', 'display_name', 'timezone')},
+            'csrf_token': session['csrf_token']}
+
+
+@app.patch('/api/account/profile')
+def profile_update(body: ProfilePatch, session=Depends(_write)):
+    return domain.update_profile(session['id'], body.display_name)
+
+
+@app.post('/api/auth/logout')
+def logout(request: Request, session=Depends(_write)):
+    security.revoke_session(request.cookies.get('kl_session'))
+    response = JSONResponse({'ok': True})
+    response.delete_cookie('kl_session', path='/')
+    return response
+
+
+@app.get('/api/suppliers')
+def suppliers(include_archived: bool = False, session=Depends(_current)):
+    return {'items': domain.list_suppliers(session['id'], include_archived)}
+
+
+@app.get('/api/suppliers/{supplier_id}/performance')
+def supplier_performance(supplier_id: str, session=Depends(_current)):
+    return domain.supplier_performance(session['id'], supplier_id)
+
+
+@app.post('/api/suppliers', status_code=201)
+def supplier_create(body: SupplierIn, session=Depends(_write)):
+    return domain.create_supplier(session['id'], body.name, body.code, body.contact, body.notes)
+
+
+@app.patch('/api/suppliers/{supplier_id}')
+def supplier_update(supplier_id: str, body: SupplierPatch, session=Depends(_write)):
+    return domain.update_supplier(session['id'], supplier_id, body.name, body.contact, body.notes)
+
+
+@app.post('/api/suppliers/{supplier_id}/archive')
+def supplier_archive(supplier_id: str, session=Depends(_write)):
+    return domain.archive_supplier(session['id'], supplier_id, True)
+
+
+@app.post('/api/suppliers/{supplier_id}/restore')
+def supplier_restore(supplier_id: str, session=Depends(_write)):
+    return domain.archive_supplier(session['id'], supplier_id, False)
+
+
+@app.delete('/api/suppliers/{supplier_id}')
+def supplier_delete(supplier_id: str, session=Depends(_write)):
+    return domain.delete_supplier(session['id'], supplier_id)
+
+
+@app.post('/api/lots', status_code=201)
+def lot_create(body: LotIn, session=Depends(_write)):
+    return domain.create_lot(session['id'], body.supplier_id)
+
+
+@app.get('/api/drafts')
+def drafts(session=Depends(_current)):
+    return {'items': domain.list_drafts(session['id'])}
+
+
+@app.get('/api/lots')
+def lots(session=Depends(_current)):
+    return {'items': domain.list_finalized_lots(session['id'])}
+
+
+@app.get('/api/lots/{lot_id}')
+def lot_detail(lot_id: str, session=Depends(_current)):
+    if workflow is None:
+        raise HTTPException(503, 'Analysis results are unavailable on this server.')
+    return workflow.result_for_lot(session['id'], lot_id)
+
+
+@app.get('/api/lots/{lot_id}/revisions')
+def lot_revisions(lot_id: str, session=Depends(_current)):
+    return domain.list_revisions(session['id'], lot_id)
+
+
+@app.post('/api/lots/{lot_id}/revisions')
+def lot_revise(lot_id: str, body: LotVersionIn, session=Depends(_write)):
+    return domain.begin_revision(session['id'], lot_id, body.expected_lot_version)
+
+
+@app.get('/api/lots/{lot_id}/revisions/{revision_id}')
+def revision_detail(lot_id: str, revision_id: str, session=Depends(_current)):
+    if workflow is None:
+        raise HTTPException(503, 'Analysis results are unavailable on this server.')
+    return workflow.result_for_revision(session['id'], lot_id, revision_id)
+
+
+@app.post('/api/lots/{lot_id}/revisions/{revision_id}/activate')
+def revision_activate(lot_id: str, revision_id: str, body: LotVersionIn, session=Depends(_write)):
+    return domain.activate_revision(session['id'], lot_id, revision_id, body.expected_lot_version)
+
+
+@app.post('/api/lots/{lot_id}/revisions/{revision_id}/report')
+def report_create(lot_id: str, revision_id: str, request: Request, session=Depends(_write)):
+    return reports.create_report(session['id'], lot_id, revision_id, _report_origin(request))
+
+
+@app.post('/api/lots/{lot_id}/revisions/{revision_id}/report/pdf/retry')
+def report_pdf_retry(lot_id: str, revision_id: str, session=Depends(_write)):
+    return reports.retry_pdf(session['id'], lot_id, revision_id)
+
+
+@app.get('/api/reports/{token}')
+def public_report(token: str, request: Request):
+    return JSONResponse(reports.get_report(token, _report_origin(request)), headers={'Referrer-Policy': 'no-referrer',
+                                                            'Cache-Control': 'no-store'})
+
+
+@app.get('/api/reports/{token}/photos/{photo_id}')
+def public_report_photo(token: str, photo_id: str):
+    return Response(reports.report_photo(token, photo_id), media_type='image/jpeg',
+                    headers={'Referrer-Policy': 'no-referrer', 'Cache-Control': 'no-store'})
+
+
+@app.get('/api/reports/{token}/pdf')
+def public_report_pdf(token: str):
+    return Response(reports.report_pdf(token), media_type='application/pdf',
+                    headers={'Referrer-Policy': 'no-referrer', 'Cache-Control': 'no-store',
+                             'Content-Disposition': f'attachment; filename="KakaoLens-{token[:12]}.pdf"'})
+
+
+@app.get('/api/reports/{token}/qr')
+def public_report_qr(token: str, request: Request):
+    return Response(reports.report_qr(token, _report_origin(request)), media_type='image/png',
+                    headers={'Referrer-Policy': 'no-referrer', 'Cache-Control': 'no-store'})
+
+
+@app.get('/api/drafts/{draft_id}')
+def draft_get(draft_id: str, session=Depends(_current)):
+    return domain.get_draft(session['id'], draft_id)
+
+
+@app.delete('/api/drafts/{draft_id}')
+def draft_delete(draft_id: str, session=Depends(_write)):
+    deleted = domain.delete_draft(session['id'], draft_id)
+    for photo_id in deleted['orphaned_photo_ids']:
+        delete_photo_assets(session['id'], photo_id)
+    for run_id in deleted['run_ids']:
+        delete_photo_assets(session['id'], run_id)
+    return {'deleted': True}
+
+
+@app.patch('/api/drafts/{draft_id}')
+def draft_patch(draft_id: str, body: DraftPatch, session=Depends(_write)):
+    return domain.update_draft(session['id'], draft_id, body.expected_version,
+                               body.weight_kg, body.notes, body.wizard_step,
+                               body.supplier_id if 'supplier_id' in body.model_fields_set else domain.UNSET)
+
+
+@app.get('/api/dashboard')
+def dashboard(period: str = '30d', session=Depends(_current)):
+    return domain.dashboard(session['id'], period)
+
+
+@app.post('/api/drafts/{draft_id}/analyze', status_code=202)
+def draft_analyze(draft_id: str, body: AnalyzeIn, session=Depends(_write)):
+    if workflow is None or classify is None or 'clf' not in _model:
+        raise HTTPException(503, 'The analysis model is unavailable on this server.')
+    return workflow.start_analysis(session['id'], draft_id, body.expected_input_version,
+                                   body.confirm_small_sample)
+
+
+@app.get('/api/drafts/{draft_id}/result')
+def draft_result(draft_id: str, session=Depends(_current)):
+    if workflow is None:
+        raise HTTPException(503, 'Analysis results are unavailable on this server.')
+    return workflow.result_for_draft(session['id'], draft_id)
+
+
+@app.post('/api/drafts/{draft_id}/finalize')
+def draft_finalize(draft_id: str, body: FinalizeIn, session=Depends(_write)):
+    saved = domain.finalized_receipt(session['id'], draft_id)
+    if saved:
+        return saved
+    if workflow is None:
+        raise HTTPException(503, 'Analysis results are unavailable on this server.')
+    workflow.verify_finalizable(session['id'], draft_id, body.expected_version)
+    return domain.finalize_draft(session['id'], draft_id, body.expected_version)
+
+
+@app.get('/api/runs/{run_id}/photos/{photo_id}/image')
+def result_photo_asset(run_id: str, photo_id: str, session=Depends(_current)):
+    if workflow is None:
+        raise HTTPException(503, 'Analysis results are unavailable on this server.')
+    payload, media_type = workflow.result_image(session['id'], run_id, photo_id)
+    return Response(payload, media_type=media_type, headers={'Cache-Control': 'private, no-store'})
+
+
+@app.post('/api/drafts/{draft_id}/photos', status_code=201)
+async def photo_upload(draft_id: str, file: UploadFile = File(...),
+                       upload_key: str = Header(alias='Idempotency-Key'), session=Depends(_write)):
+    if workflow is None:
+        raise HTTPException(503, 'Photo processing is unavailable on this server.')
+    raw = await file.read(workflow.MAX_FILE_BYTES + 1)
+    return workflow.upload_photo(session['id'], draft_id, file.filename or 'foto', raw, upload_key)
+
+
+@app.put('/api/drafts/{draft_id}/photos/{photo_id}')
+async def photo_replace(draft_id: str, photo_id: str, file: UploadFile = File(...),
+                        upload_key: str = Header(alias='Idempotency-Key'), session=Depends(_write)):
+    if workflow is None:
+        raise HTTPException(503, 'Photo processing is unavailable on this server.')
+    raw = await file.read(workflow.MAX_FILE_BYTES + 1)
+    return workflow.replace_photo(session['id'], draft_id, photo_id,
+                                  file.filename or 'foto', raw, upload_key)
+
+
+@app.delete('/api/drafts/{draft_id}/photos/{photo_id}')
+def photo_delete(draft_id: str, photo_id: str, session=Depends(_write)):
+    if workflow is None:
+        raise HTTPException(503, 'Photo processing is unavailable on this server.')
+    return workflow.delete_draft_photo(session['id'], draft_id, photo_id)
+
+
+@app.get('/api/drafts/{draft_id}/photos')
+def photos(draft_id: str, session=Depends(_current)):
+    if workflow is None:
+        raise HTTPException(503, 'Photo processing is unavailable on this server.')
+    items = workflow.list_photos(session['id'], draft_id)
+    return {'items': items, 'summary': workflow.photo_summary(items)}
+
+
+@app.delete('/api/drafts/{draft_id}/photos')
+def photos_clear(draft_id: str, body: ExpectedInput, session=Depends(_write)):
+    if workflow is None:
+        raise HTTPException(503, 'Photo processing is unavailable on this server.')
+    return workflow.clear_draft_photos(session['id'], draft_id, body.expected_input_version)
+
+
+@app.get('/api/drafts/{draft_id}/photos/{photo_id}/image/{kind}')
+def photo_asset(draft_id: str, photo_id: str, kind: str, session=Depends(_current)):
+    if workflow is None:
+        raise HTTPException(503, 'Photo processing is unavailable on this server.')
+    payload, media_type = workflow.photo_image(session['id'], draft_id, photo_id, kind)
+    return Response(payload, media_type=media_type, headers={'Cache-Control': 'private, no-store'})
+
+
+@app.patch('/api/drafts/{draft_id}/photos/{photo_id}')
+def photo_review(draft_id: str, photo_id: str, body: PhotoReview, session=Depends(_write)):
+    if workflow is None:
+        raise HTTPException(503, 'Photo processing is unavailable on this server.')
+    return workflow.review_photo(session['id'], draft_id, photo_id,
+                                 body.expected_input_version, body.review_state)
+
+
+@app.post('/api/drafts/{draft_id}/photos/use-all')
+def photos_use_all(draft_id: str, body: ExpectedInput, session=Depends(_write)):
+    if workflow is None:
+        raise HTTPException(503, 'Photo processing is unavailable on this server.')
+    return workflow.use_all_ready(session['id'], draft_id, body.expected_input_version)
+
+
+@app.post('/api/drafts/{draft_id}/photos/{photo_id}/retry')
+def photo_retry(draft_id: str, photo_id: str, session=Depends(_write)):
+    if workflow is None:
+        raise HTTPException(503, 'Photo processing is unavailable on this server.')
+    return workflow.retry_precheck(session['id'], draft_id, photo_id)
 
 
 def _decode(raw, name):
     """Convert bytes from image to BGR array. A file that fails to decode is raised"""
     img = cv2.imdecode(np.frombuffer(raw, np.uint8), cv2.IMREAD_COLOR) #decode the bytes into a BGR array, so that opencv can process it.
     if img is None:
-        raise HTTPException(400, f"'{name}' bukan gambar yang valid dibaca. Kirim dalam JPG atau PNG.")
+        raise HTTPException(400, f"'{name}' is not a readable image. Upload a JPEG or PNG file.")
     return img
 
 
@@ -152,7 +502,7 @@ def _annotate(img, beans, hasil):
 
     ok, buf = cv2.imencode(".jpg", canvas, [cv2.IMWRITE_JPEG_QUALITY, ANNOTATED_JPEG_QUALITY]) #compress the annotated image 
     if not ok:
-        raise HTTPException(500, "Gagal mengenkode gambar hasil.")
+        raise HTTPException(500, "Unable to encode the result image.")
     return base64.b64encode(buf.tobytes()).decode() #encode the annotated image as a base64 string so it can be sent in JSON
 
 
@@ -210,18 +560,20 @@ async def analyze(files: List[UploadFile] = File(...)):
     Labels from every photo are pooled before grading. Perphoto detail is
     returned alongside so a user can tell which photo caused a warning.
     """
+    if classify is None or 'clf' not in _model:
+        raise HTTPException(503, 'The analysis model is unavailable on this server.')
     if len(files) > MAX_FILES:
-        raise HTTPException(400, f"Maksimal {MAX_FILES} foto per permintaan, dikirim {len(files)}.")
+        raise HTTPException(400, f"Maximum {MAX_FILES} photos per request; {len(files)} received.")
 
     t_req = time.perf_counter()
-    log.info("permintaan analisis diterima, %d foto", len(files))
+    log.info("permintaan analisis diterima, %d photos", len(files))
 
     semua_label, total_unreadable, per_foto = [], 0, []
 
     for i, f in enumerate(files, 1):
         raw = await f.read() #read file and save it as a bytes object. 
         if len(raw) > MAX_FILE_BYTES:
-            raise HTTPException(400, f"'{f.filename}' lebih dari {MAX_FILE_BYTES // (1024 * 1024)} MB.")
+            raise HTTPException(400, f"'{f.filename}' exceeds {MAX_FILE_BYTES // (1024 * 1024)} MB.")
 
         log.info("[%d/%d] %s", i, len(files), f.filename) #to show every photo number index
         labels, n_unread, laporan = _analyze_one(_decode(raw, f.filename), f.filename)
@@ -233,21 +585,21 @@ async def analyze(files: List[UploadFile] = File(...)):
     kosong = [p["nama"] for p in per_foto if p["biji_terbaca"] == 0]
 
     if not semua_label:
-        raise HTTPException(422, "Tidak ada biji kakao yang terdeteksi pada foto. Pastikan biji tidak terlalu rapat dan seluruh area kertas alas terlihat dalam foto.")
+        raise HTTPException(422, "No cocoa beans were detected. Leave space between beans and keep the entire paper background in the photo.")
 
     hasil = grade.grade(semua_label, n_unreadable=total_unreadable, n_photos=len(files))
 
     #Segmentation warnings sit above grading warnings rather than beside them. If detection is unreliable then the unreadable counts feeding grade() are
     #unreliable too, which means the range itself rests on shaky inputs. The frontend should treat this as a blocker, not a footnote.
-    blocking = [f"Hasil analisis pada “{p['nama']}” perlu diperhatikan. Terdapat banyak bagian kecil yang tidak dapat dihitung sebagai biji, sehingga kemungkinan terdapat biji pecah atau tidak terhitung."
+    blocking = [f"Review the result for “{p['nama']}”. Many small fragments were excluded, so some beans may be broken or uncounted."
                 for p in per_foto if p["segmentasi_curiga"]]
-    blocking += [f"Tidak ada biji yang terdeteksi pada “{n}”." for n in kosong]
+    blocking += [f"No beans were detected in “{n}”." for n in kosong]
 
     #warning level so a blocked result stands out from the routine lines instead of scrolling past unnoticed
     for b in blocking:
         log.warning("perlu diperhatikan: %s", b)
     
-    log.info("ringkasan %d foto | %d biji terbaca, %d tidak terbaca", len(files), len(semua_label), total_unreadable) #summary of all photos classified in numbers
+    log.info("ringkasan %d photos | %d beans terbaca, %d tidak terbaca", len(files), len(semua_label), total_unreadable) #summary of all photos classified in numbers
     log.info("hasil | %s | total %.0f ms", _ringkas_kelas(hasil["persen"], "%"), 1000 * (time.perf_counter() - t_req)) #summary of all photos classified in percent
     
     return {
