@@ -1,0 +1,99 @@
+{
+  "task": "classification",
+  "run": "TEST_qwen",
+  "split": "test",
+  "created": "2026-09-26 18:41:18 WIB",
+  "git": {
+    "head": "ad06e99dc4f23aa1e563e6870effd69923ec8ff9",
+    "dirty": false
+  },
+  "env": {
+    "cv2": "5.0.0",
+    "numpy": "2.4.4",
+    "python": "3.11.8"
+  },
+  "model": {
+    "kind": "local",
+    "model_id": "qwen3-vl:4b-instruct",
+    "endpoint": "http://localhost:11434/v1",
+    "prompt_version": "v1",
+    "prompt_text": "The image shows one cocoa bean cut lengthwise (cut test). Classify its fermentation as exactly one of: fermented, poorly_fermented. Reply with JSON only, no other text: {\"label\": \"fermented\" or \"poorly_fermented\", \"confidence\": a number from 0 to 1}.",
+    "workers": 1,
+    "timeout_s": 60,
+    "retries": "up to 3 attempts on 408/429/5xx/network",
+    "input": "raw crop from the benchmark, background set to black with the segmenter mask, no colour gain, lossless PNG, native crop size (median 161x228 px)",
+    "price_usd_per_1m_tokens": null,
+    "cost_note": "API cost 0 (local endpoint); local GPU time is in latency, hardware and energy cost not measured",
+    "latency_note": "wall time of all HTTP attempts and retry waits per bean; calls run in parallel, so per-bean latency is not throughput"
+  },
+  "benchmark": {
+    "id": "S0_csv_full",
+    "manifest_sha256": "a350a8cd8293a60cd23230ac574399637f77226465f6c7b1c6db4ebf266fe847",
+    "segment_py_sha256": "9248dacdc0ffc24094fcfa3528747a89797f34c98a7e09a309dbf1f4046943fc",
+    "built_at_git": "ddcfe0a35fd513aeb7fed15286970a9074d03c16",
+    "built": "2026-09-26 10:29:28 WIB"
+  },
+  "labels": {
+    "csv": "data/labels.csv",
+    "sha256": "753c4b4bca564168110a64ca0013fedf942e3b5c002dd3fa2e51b01f16c7936d",
+    "rule": "crop idx N = CSV idx N of the same photo; no matching to canon, no relabelling"
+  },
+  "code": {
+    "segment.py": {
+      "sha256": "9248dacdc0ffc24094fcfa3528747a89797f34c98a7e09a309dbf1f4046943fc",
+      "copy": "code_snapshot/segment.py"
+    },
+    "classify.py": {
+      "sha256": "5f9d8a83f36c98b6092cb2fbb136c47d3eeaadebf8a9b243bf9285d822e19644",
+      "copy": "code_snapshot/classify.py"
+    },
+    "config.py": {
+      "sha256": "201a4355380913cc6e05997e8cf0a258b8ec2ae0ac244419de062ec10d62b483",
+      "copy": "code_snapshot/config.py"
+    }
+  },
+  "code_notes": {
+    "segment.py": "same file that cut the benchmark crops",
+    "classify.py": "not used by this model",
+    "config.py": "not used by this model"
+  },
+  "n_beans": 525,
+  "excluded_photos": [],
+  "limit": null,
+  "compare_to": null,
+  "summary": {
+    "n": 525,
+    "correct": 351,
+    "accuracy": 0.6685714285714286,
+    "n_F": 351,
+    "tp_F": 347,
+    "recall_F": 0.9886039886039886,
+    "precision_F": 0.6711798839458414,
+    "f1_F": 0.7995391705069125,
+    "n_PF": 174,
+    "tp_PF": 4,
+    "recall_PF": 0.022988505747126436,
+    "precision_PF": 0.5,
+    "f1_PF": 0.04395604395604396,
+    "balanced_accuracy": 0.5057962471755575,
+    "invalid": 0,
+    "error": 0,
+    "confident_wrong": 172,
+    "latency_ms_mean": 3296.7769523809525,
+    "latency_ms_p50": 3228.5,
+    "latency_ms_p95": 3806.9,
+    "cost_usd": 0.0,
+    "input_tokens": 82204,
+    "output_tokens": 8977,
+    "confusion": {
+      "F->F": 347,
+      "F->PF": 4,
+      "F->INV": 0,
+      "F->ERR": 0,
+      "PF->F": 170,
+      "PF->PF": 4,
+      "PF->INV": 0,
+      "PF->ERR": 0
+    }
+  }
+}

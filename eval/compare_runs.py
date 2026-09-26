@@ -148,6 +148,11 @@ def main(run_ids: list[str]) -> None:
         cfg, model = run["config"], run["config"]["model"]
         overall = run["variants"]["ALL"]
         kind = model["kind"]
+        latency_note = model["latency_note"]
+        if model.get("workers") == 1:
+            latency_note = latency_note.replace(
+                "calls run in parallel, so per-bean latency is not throughput",
+                "one worker; per-bean latency includes HTTP overhead")
         if kind in ("openai", "gemini"):
             price = model.get("price_usd_per_1m_tokens")
             if price is None:
@@ -175,7 +180,7 @@ def main(run_ids: list[str]) -> None:
                      "invalid_plus_error": int(overall["invalid"]) + int(overall["error"]),
                      "latency_mean_ms": cfg["summary"]["latency_ms_mean"],
                      "latency_p95_ms": cfg["summary"]["latency_ms_p95"],
-                     "latency_note": model["latency_note"], "wall_time_seconds": run["wall_s"],
+                     "latency_note": latency_note, "wall_time_seconds": run["wall_s"],
                      "api_cost_usd": cost, "api_cost_per_1000_beans_usd": per_1000})
 
     out = ROOT / "final"
@@ -209,7 +214,8 @@ def main(run_ids: list[str]) -> None:
                   f"- Latency per bean: mean {fmt(row['latency_mean_ms'], 1)} ms, "
                   f"p95 {fmt(row['latency_p95_ms'], 1)} ms. {row['latency_note']}",
                   f"- Total wall time: {fmt(row['wall_time_seconds'], 1)} s",
-                  f"- API cost: {row['api_cost_usd']}; per 1,000 beans: {row['api_cost_per_1000_beans_usd']}", ""]
+                  f"- API cost (USD): {row['api_cost_usd']}; per 1,000 beans (USD): "
+                  f"{row['api_cost_per_1000_beans_usd']}", ""]
     lines += ["## Notes", "",
               "- Test was run once per model after all model and parameter choices were made on val; any whole-run retry is listed below.",
               "- LLM prompts were not tuned on test; prompt version is listed per model.",

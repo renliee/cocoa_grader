@@ -12,3 +12,4 @@ cls,SMOKE_qwen,val,2026-09-26 17:48:57 WIB,e6482c29f0,True,local qwen3-vl:4b-ins
 cls,TEST_before,test,2026-09-26 18:04:06 WIB,e6482c29f0,True,yolo best.pt,BA 0.494 | F 52/351 | PF 146/174
 cls,TEST_FT_E,test,2026-09-26 18:05:14 WIB,e6482c29f0,True,yolo FT_E.pt,BA 0.607 | F 212/351 | PF 106/174
 cls,TEST_openai,test,2026-09-26 18:11:39 WIB,e6482c29f0,True,openai gpt-6-sol,BA 0.478 | F 291/351 | PF 22/174
+cls,TEST_qwen,test,2026-09-26 18:41:18 WIB,ad06e99dc4,False,local qwen3-vl:4b-instruct,BA 0.506 | F 347/351 | PF 4/174

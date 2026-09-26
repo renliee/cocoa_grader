@@ -1,0 +1,102 @@
+{
+  "task": "classification",
+  "run": "TEST_FT_E",
+  "split": "test",
+  "created": "2026-09-26 18:05:14 WIB",
+  "git": {
+    "head": "e6482c29f04da75c1e2f6130c9ce42132ac3cd18",
+    "dirty": true
+  },
+  "env": {
+    "cv2": "5.0.0",
+    "numpy": "2.4.4",
+    "python": "3.11.8"
+  },
+  "model": {
+    "kind": "yolo",
+    "weights": "/home/ren-lie/cocoa/cocoa_grader/ml/finetune/weights/FT_E.pt",
+    "weights_sha256": "963200b87a498bff272d7ceecb79d2db67f28a7cfdf44feddb61b2ca13508e29",
+    "device": "cpu",
+    "input": "classify.prepare_crop(crop, mask=mask), the same call classify_tray makes",
+    "preprocessing_config": {
+      "CLASSIFY_IMGSZ": "224",
+      "GREEN_CAST_G_GAIN": "1.24",
+      "MASK_BACKGROUND_IN_CROP": "True",
+      "PAD_MODE": "'black'"
+    },
+    "cost_note": "API cost 0 (runs locally). Hardware and energy cost not measured.",
+    "compute_ms_total": 3305.6,
+    "compute_ms_per_bean": 6.3,
+    "latency_note": "batched crop prep + predict divided by number of beans; model load excluded"
+  },
+  "benchmark": {
+    "id": "S0_csv_full",
+    "manifest_sha256": "a350a8cd8293a60cd23230ac574399637f77226465f6c7b1c6db4ebf266fe847",
+    "segment_py_sha256": "9248dacdc0ffc24094fcfa3528747a89797f34c98a7e09a309dbf1f4046943fc",
+    "built_at_git": "ddcfe0a35fd513aeb7fed15286970a9074d03c16",
+    "built": "2026-09-26 10:29:28 WIB"
+  },
+  "labels": {
+    "csv": "data/labels.csv",
+    "sha256": "753c4b4bca564168110a64ca0013fedf942e3b5c002dd3fa2e51b01f16c7936d",
+    "rule": "crop idx N = CSV idx N of the same photo; no matching to canon, no relabelling"
+  },
+  "code": {
+    "segment.py": {
+      "sha256": "9248dacdc0ffc24094fcfa3528747a89797f34c98a7e09a309dbf1f4046943fc",
+      "copy": "code_snapshot/segment.py"
+    },
+    "classify.py": {
+      "sha256": "5f9d8a83f36c98b6092cb2fbb136c47d3eeaadebf8a9b243bf9285d822e19644",
+      "copy": "code_snapshot/classify.py"
+    },
+    "config.py": {
+      "sha256": "201a4355380913cc6e05997e8cf0a258b8ec2ae0ac244419de062ec10d62b483",
+      "copy": "code_snapshot/config.py"
+    }
+  },
+  "code_notes": {
+    "segment.py": "same file that cut the benchmark crops",
+    "classify.py": "used (prepare_crop and classify_beans)",
+    "config.py": "used"
+  },
+  "n_beans": 525,
+  "excluded_photos": [],
+  "limit": null,
+  "compare_to": null,
+  "summary": {
+    "n": 525,
+    "correct": 318,
+    "accuracy": 0.6057142857142858,
+    "n_F": 351,
+    "tp_F": 212,
+    "recall_F": 0.603988603988604,
+    "precision_F": 0.7571428571428571,
+    "f1_F": 0.6719492868462758,
+    "n_PF": 174,
+    "tp_PF": 106,
+    "recall_PF": 0.6091954022988506,
+    "precision_PF": 0.4326530612244898,
+    "f1_PF": 0.5059665871121718,
+    "balanced_accuracy": 0.6065920031437273,
+    "invalid": 0,
+    "error": 0,
+    "confident_wrong": 70,
+    "latency_ms_mean": 6.296299617152718,
+    "latency_ms_p50": 6.296299617152683,
+    "latency_ms_p95": 6.296299617152683,
+    "cost_usd": 0.0,
+    "input_tokens": null,
+    "output_tokens": null,
+    "confusion": {
+      "F->F": 212,
+      "F->PF": 139,
+      "F->INV": 0,
+      "F->ERR": 0,
+      "PF->F": 68,
+      "PF->PF": 106,
+      "PF->INV": 0,
+      "PF->ERR": 0
+    }
+  }
+}
