@@ -1,4 +1,4 @@
-import { api, escapeHtml } from '../api.js';
+import { api, escapeHtml, uploadKey } from '../api.js';
 import { icon } from '../components/icons.js';
 
 const selectedByDraft = new Map();
@@ -119,7 +119,7 @@ export async function renderSample(container, draftId, navigate) {
     for (const [index, file] of files.entries()) {
       uploadStatus.textContent = `Uploading photo ${index + 1} of ${files.length}…`;
       const body = new FormData(); body.append('file', file, file.name);
-      try { await api(`/drafts/${draftId}/photos`, { method: 'POST', body, headers: { 'Idempotency-Key': crypto.randomUUID() } }); }
+      try { await api(`/drafts/${draftId}/photos`, { method: 'POST', body, headers: { 'Idempotency-Key': uploadKey() } }); }
       catch (exc) { failures.push(`${file.name}: ${exc.message}`); }
     }
     setBusy(false);
@@ -177,7 +177,7 @@ export async function renderSample(container, draftId, navigate) {
       setBusy(true);
       uploadStatus.textContent = `Replacing photo ${selected + 1}…`; error.hidden = true;
       const body = new FormData(); body.append('file', file, file.name);
-      try { await api(`/drafts/${draftId}/photos/${photo.id}`, { method: 'PUT', body, headers: { 'Idempotency-Key': crypto.randomUUID() } }); await renderSample(container, draftId, navigate); }
+      try { await api(`/drafts/${draftId}/photos/${photo.id}`, { method: 'PUT', body, headers: { 'Idempotency-Key': uploadKey() } }); await renderSample(container, draftId, navigate); }
       catch (exc) { error.textContent = exc.message; error.hidden = false; uploadStatus.textContent = ''; }
       finally { setBusy(false); }
     }));

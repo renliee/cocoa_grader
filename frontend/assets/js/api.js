@@ -11,6 +11,18 @@ export function setCsrf(token) {
   csrfToken = token || '';
 }
 
+export function uploadKey() {
+  const bytes = new Uint8Array(16);
+  if (globalThis.crypto?.getRandomValues) {
+    globalThis.crypto.getRandomValues(bytes);
+  } else {
+    for (let index = 0; index < bytes.length; index++) {
+      bytes[index] = Math.floor(Math.random() * 256);
+    }
+  }
+  return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
 export async function api(path, { method = 'GET', body, headers: extraHeaders = {} } = {}) {
   const isForm = typeof FormData !== 'undefined' && body instanceof FormData;
   const headers = { Accept: 'application/json', ...extraHeaders };
