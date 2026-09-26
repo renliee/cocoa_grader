@@ -6,9 +6,8 @@ import cv2
 import numpy as np
 
 try:
-    from . import color, config #runs if this file is imported as a module
+    from . import config #runs if this file is imported as a module
 except ImportError:
-    import color
     import config #runs if this file is run as __main__
 
 
@@ -53,8 +52,6 @@ def prepare_crop(bgr, pad_mode=None, mask=None, g_gain=None):
     pad_mode = config.PAD_MODE if pad_mode is None else pad_mode
     g_gain = config.GREEN_CAST_G_GAIN if g_gain is None else g_gain
 
-    if config.PAPER_WB_ENABLED and mask is not None:
-        bgr = color.normalize_to_paper(bgr, mask)
     img = bgr.copy()
 
     if mask is not None and config.MASK_BACKGROUND_IN_CROP:

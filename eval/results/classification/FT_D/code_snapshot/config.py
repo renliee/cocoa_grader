@@ -116,21 +116,6 @@ PAD_MODE = "black"
 #REASONED. Local gate: 121 beans across 8 photos. Mask alone improved fermented recall from 5/21 to 8/21; mask + gain 1.24 reached 15/21, supporting the change.
 MASK_BACKGROUND_IN_CROP = True
 
-# Enable colour correction using the paper around each bean.
-PAPER_WB_ENABLED = False
-
-# Target value for each paper colour channel.
-PAPER_WB_TARGET = 200
-
-# Minimum bright paper pixels needed for correction.
-PAPER_WB_MIN_PIXELS = 50
-
-# Lowest allowed paper correction gain.
-PAPER_WB_GAIN_MIN = 0.5
-
-# Highest allowed paper correction gain.
-PAPER_WB_GAIN_MAX = 3.0
-
 #Boost the green channel before inference so field photo gets closer to the training colours.
 #REASONED. 1.24 is the inverse of 0.807, which is mean(R)/mean(G) over framed_and_centralized dataset (R 61.1, G 75.7). 
 #Scaling G by 0.807 on the Santos test set dropped macro-F1 from 0.846 to 0.595, so the model leans on the green cast. 

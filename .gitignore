@@ -7,6 +7,7 @@ datasets/
 runs/
 *.pt
 !backend/weights/best.pt
+!ml/finetune/weights/*.pt
 
 #output of segment.py
 crops/

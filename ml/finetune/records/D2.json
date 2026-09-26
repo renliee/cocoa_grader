@@ -1,0 +1,108 @@
+{
+  "name": "D2",
+  "created": "2026-09-26 16:02:19 WIB",
+  "git": {
+    "head": "6532b51ea4914c49acb33e7a91abda4f8aec42e1",
+    "dirty": true
+  },
+  "labels_csv_sha256": "753c4b4bca564168110a64ca0013fedf942e3b5c002dd3fa2e51b01f16c7936d",
+  "preprocessing": "classify.prepare_crop(crop, mask=mask), same call as inference",
+  "classify_py_sha256": "558baf2c1af06c66f26e0243e04c51e299d6decc20260cc305bb38821fefa827",
+  "config_values": {
+    "CLASSIFY_IMGSZ": "224",
+    "GREEN_CAST_G_GAIN": "1.24",
+    "MASK_BACKGROUND_IN_CROP": "True",
+    "PAD_MODE": "'black'"
+  },
+  "train": {
+    "bench": "S0_train",
+    "split": "train",
+    "variants": [
+      "canon",
+      "blur",
+      "lowl",
+      "overx",
+      "rotate",
+      "warm"
+    ],
+    "counts": {
+      "poorly_fermented": 60,
+      "fermented": 59
+    },
+    "trimmed": {
+      "train_canon_8": "used CSV idx 0-13, dropped idx 14-14 (checked by eye)"
+    },
+    "photos": [
+      "train_canon_1",
+      "train_canon_2",
+      "train_canon_3",
+      "train_canon_4",
+      "train_canon_5",
+      "train_canon_6",
+      "train_canon_7",
+      "train_canon_8"
+    ],
+    "excluded": [],
+    "bench_segment_py_sha256": "9248dacdc0ffc24094fcfa3528747a89797f34c98a7e09a309dbf1f4046943fc",
+    "augmentation": {
+      "variants": [
+        "blur",
+        "rotate",
+        "warm",
+        "lowl",
+        "overx"
+      ],
+      "ranges": {
+        "blur_sigma_px": [
+          1.5,
+          3.0
+        ],
+        "rotate_degrees": [
+          -18.0,
+          18.0
+        ],
+        "warm_blue_gain": [
+          0.7,
+          0.85
+        ],
+        "warm_red_gain": [
+          1.15,
+          1.3
+        ],
+        "lowl_gain": [
+          0.5,
+          0.7
+        ],
+        "overx_gain": [
+          1.35,
+          1.65
+        ]
+      },
+      "seed": "first 8 bytes of SHA256(stem__idx:variant)",
+      "total_images": 714,
+      "ranges_note": "Chosen estimates; not measured against validation photos"
+    }
+  },
+  "val": {
+    "bench": "S0_csv_full",
+    "split": "val",
+    "variants": [
+      "canon"
+    ],
+    "counts": {
+      "fermented": 61,
+      "poorly_fermented": 29
+    },
+    "trimmed": {},
+    "photos": [
+      "val_canon_1",
+      "val_canon_2",
+      "val_canon_3",
+      "val_canon_4",
+      "val_canon_5",
+      "val_canon_6"
+    ],
+    "excluded": [],
+    "bench_segment_py_sha256": "9248dacdc0ffc24094fcfa3528747a89797f34c98a7e09a309dbf1f4046943fc"
+  }
+}

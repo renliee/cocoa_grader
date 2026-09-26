@@ -4,3 +4,5 @@ cls,audit_before_val_20260926,val,2026-09-26 12:34:18 WIB,ddcfe0a35f,False,yolo 
 cls,FT_A,val,2026-09-26 14:58:29 WIB,a358243468,False,yolo last.pt,BA 0.603 | F 256/367 | PF 87/171
 cls,FT_B,val,2026-09-26 14:58:34 WIB,a358243468,True,yolo last.pt,BA 0.587 | F 259/367 | PF 80/171
 cls,FT_C,val,2026-09-26 15:11:51 WIB,a358243468,True,yolo last.pt,BA 0.614 | F 178/367 | PF 127/171
+cls,FT_D,val,2026-09-26 16:06:14 WIB,6532b51ea4,True,yolo last.pt,BA 0.621 | F 258/367 | PF 92/171
+cls,FT_E,val,2026-09-26 16:41:16 WIB,3a879e2ecb,True,yolo last.pt,BA 0.634 | F 195/367 | PF 126/171

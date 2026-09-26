@@ -117,7 +117,7 @@ PAD_MODE = "black"
 MASK_BACKGROUND_IN_CROP = True
 
 # Enable colour correction using the paper around each bean.
-PAPER_WB_ENABLED = False
+PAPER_WB_ENABLED = True
 
 # Target value for each paper colour channel.
 PAPER_WB_TARGET = 200

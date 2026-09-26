@@ -1,0 +1,70 @@
+{
+  "name": "D3",
+  "created": "2026-09-26 16:37:52 WIB",
+  "git": {
+    "head": "3a879e2ecbfa3c86139e5c4a153e53126b39060b",
+    "dirty": true
+  },
+  "labels_csv_sha256": "753c4b4bca564168110a64ca0013fedf942e3b5c002dd3fa2e51b01f16c7936d",
+  "preprocessing": "classify.prepare_crop(crop, mask=mask), same call as inference",
+  "classify_py_sha256": "5f9d8a83f36c98b6092cb2fbb136c47d3eeaadebf8a9b243bf9285d822e19644",
+  "config_values": {
+    "CLASSIFY_IMGSZ": "224",
+    "GREEN_CAST_G_GAIN": "1.24",
+    "MASK_BACKGROUND_IN_CROP": "True",
+    "PAD_MODE": "'black'"
+  },
+  "train": {
+    "bench": "S0_train",
+    "split": "train",
+    "variants": [
+      "canon",
+      "blur",
+      "lowl",
+      "overx",
+      "rotate",
+      "warm"
+    ],
+    "counts": {
+      "poorly_fermented": 60,
+      "fermented": 59
+    },
+    "trimmed": {
+      "train_canon_8": "used CSV idx 0-13, dropped idx 14-14 (checked by eye)"
+    },
+    "photos": [
+      "train_canon_1",
+      "train_canon_2",
+      "train_canon_3",
+      "train_canon_4",
+      "train_canon_5",
+      "train_canon_6",
+      "train_canon_7",
+      "train_canon_8"
+    ],
+    "excluded": [],
+    "bench_segment_py_sha256": "9248dacdc0ffc24094fcfa3528747a89797f34c98a7e09a309dbf1f4046943fc"
+  },
+  "val": {
+    "bench": "S0_csv_full",
+    "split": "val",
+    "variants": [
+      "canon"
+    ],
+    "counts": {
+      "fermented": 61,
+      "poorly_fermented": 29
+    },
+    "trimmed": {},
+    "photos": [
+      "val_canon_1",
+      "val_canon_2",
+      "val_canon_3",
+      "val_canon_4",
+      "val_canon_5",
+      "val_canon_6"
+    ],
+    "excluded": [],
+    "bench_segment_py_sha256": "9248dacdc0ffc24094fcfa3528747a89797f34c98a7e09a309dbf1f4046943fc"
+  }
+}
