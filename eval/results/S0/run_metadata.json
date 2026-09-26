@@ -1,0 +1,26 @@
+{
+  "run": "S0",
+  "set": "val",
+  "created": "2026-09-26 09:47:16 WIB",
+  "settings": "target_w=1600 pad=4",
+  "git": {
+    "head": "ddcfe0a35fd513aeb7fed15286970a9074d03c16",
+    "dirty": false
+  },
+  "args": {
+    "run": "S0",
+    "set": "val",
+    "images": "/home/ren-lie/cocoa/cocoa_grader/data",
+    "target_w": null,
+    "pad": null,
+    "param": [],
+    "final": false,
+    "force": false,
+    "allow_env_mismatch": false
+  },
+  "env": {
+    "cv2": "5.0.0",
+    "numpy": "2.4.4",
+    "python": "3.11.8"
+  }
+}

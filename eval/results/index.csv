@@ -1,0 +1,3 @@
+task,run,split,created,git_head,dirty,detail,headline
+seg,audit_seg_val_20260926,val,2026-09-26 12:34:12 WIB,ddcfe0a35f,False,segment.py 9248dacdc0ff,detected 538/540 | exact photos 35/36
+cls,audit_before_val_20260926,val,2026-09-26 12:34:18 WIB,ddcfe0a35f,False,yolo best.pt,BA 0.495 | F 76/367 | PF 134/171

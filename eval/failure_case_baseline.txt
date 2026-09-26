@@ -1,0 +1,109 @@
+KAKAO LENS — FAILURE CASE BASELINE
+Checkpoint 1 — Phase I: Baseline
+
+A. HASIL BASELINE CLASSIFICATION
+
+Evaluasi classification menggunakan crop yang berhasil dihasilkan oleh frozen MVP segmenter. Karena dua biji pada variant overexposed tidak berhasil disegmentasi, jumlah sampel classification untuk variant tersebut adalah 88, sedangkan lima variant lainnya masing-masing memiliki 90 sampel.
+
+Variant      N    Precision F   Recall F   Precision PF   Recall PF   Balanced Accuracy
+canon       90      1.000        0.098        0.345         1.000          0.549
+blur        90      0.681        0.525        0.326         0.483          0.504
+low         90      0.739        0.279        0.343         0.793          0.536
+over        88      0.565        0.220        0.292         0.655          0.438
+rotate      90      0.538        0.113        0.286         0.786          0.449
+warm        90      1.000        0.016        0.303         1.000          0.508
+ALL        538      0.673        0.207        0.315         0.784          0.495
+
+Confusion matrix seluruh variant:
+- Ground-truth Fermented: 76 diprediksi Fermented, 291 diprediksi Poorly Fermented.
+- Ground-truth Poorly Fermented: 37 diprediksi Fermented, 134 diprediksi Poorly Fermented.
+
+Temuan utama classification:
+
+1. Kelemahan utama sudah muncul pada kondisi canonical.
+Balanced Accuracy canonical hanya 54,9%. Artinya, masalah awal KakaoLens bukan sekadar ketahanan terhadap satu kondisi akuisisi tertentu, tetapi generalisasi classifier MVP terhadap domain data lokal yang baru.
+
+2. Terdapat ketimpangan performa yang sangat besar antar kelas.
+Secara agregat, Recall Fermented hanya 20,7%, sedangkan Recall Poorly Fermented mencapai 78,4%. Pada canonical, Recall Fermented hanya 9,8% sementara Recall Poorly Fermented mencapai 100%. Pola serupa bahkan lebih ekstrem muncul pada warm lighting, dengan Recall Fermented 1,6% dan Recall Poorly Fermented 100%.
+
+Hal ini menunjukkan bahwa baseline sangat sering mengalihkan biji ground-truth Fermented menjadi Poorly Fermented. Precision Fermented yang relatif tinggi tidak menghilangkan masalah tersebut: model hanya sedikit memberikan prediksi Fermented, sehingga banyak sampel Fermented tidak pernah berhasil dipulihkan.
+
+3. Overexposed dan rotation menunjukkan degradasi tambahan yang paling jelas terhadap canonical.
+Balanced Accuracy:
+- Canonical: 54,9%
+- Overexposed: 43,8%
+- Rotation: 44,9%
+
+Kedua kondisi tersebut sekitar 10–11 percentage points lebih rendah dari canonical. Oleh karena itu keduanya dicatat sebagai robustness failure yang perlu diperiksa kembali setelah general classifier adaptation dilakukan.
+
+4. Low light, blur, dan warm lighting tetap memiliki performa absolut yang rendah, tetapi baseline canonical sendiri sudah lemah.
+- Low light: BA 53,6%
+- Blur: BA 50,4%
+- Warm: BA 50,8%
+
+Pada tahap baseline ini, ketiganya belum dapat langsung disimpulkan sebagai failure yang terutama disebabkan oleh kondisi akuisisi, karena performanya berada di sekitar baseline canonical yang memang sudah buruk. Warm lighting tetap perlu diperhatikan karena menghasilkan class asymmetry yang sangat ekstrem meskipun Balanced Accuracy-nya tidak jauh di bawah canonical.
+
+Failure case classification yang diidentifikasi:
+- FC-C1 — General target-domain classification failure: canonical BA hanya 54,9%.
+- FC-C2 — Severe class asymmetry: model sangat lemah dalam merecall kelas Fermented.
+- FC-C3 — Overexposure robustness: BA turun menjadi 43,8%.
+- FC-C4 — Rotation/layout robustness: BA turun menjadi 44,9%.
+- FC-C5 — Warm-light class instability: Recall Fermented turun hingga 1,6%, walaupun BA keseluruhan 50,8%.
+
+Implikasi untuk Phase II:
+Karena canonical sendiri belum memadai, iterasi pertama sebaiknya berfokus pada general adaptation/fine-tuning classifier terhadap data training lokal terlebih dahulu. Setelah baseline umum membaik, seluruh enam variant perlu diuji ulang untuk menentukan failure variant mana yang benar-benar masih tersisa dan membutuhkan augmentation atau preprocessing yang lebih spesifik.
+
+
+B. HASIL BASELINE SEGMENTATION
+
+Segmentation dievaluasi secara terpisah dari classification dengan membandingkan jumlah biji fisik yang diharapkan dengan jumlah objek yang berhasil dihasilkan oleh segmenter.
+
+Variant      Photos    Detected / Expected    Photos Exact
+canon          6            90 / 90              6 / 6
+blur           6            90 / 90              6 / 6
+low            6            90 / 90              6 / 6
+over           6            88 / 90              5 / 6
+rotate         6            90 / 90              6 / 6
+warm           6            90 / 90              6 / 6
+ALL           36           538 / 540             35 / 36
+
+Secara keseluruhan, segmenter memperoleh 538 dari 540 biji yang diharapkan (99,63%). Sebanyak 35 dari 36 foto menghasilkan jumlah objek yang tepat.
+
+Satu-satunya count failure terdapat pada:
+- val_overx_1: 13 / 15 biji terdeteksi.
+
+Temuan utama segmentation:
+
+1. Segmentation bukan kelemahan utama baseline.
+Lima dari enam variant memperoleh 90/90 objek, dan hanya satu foto overexposed yang kehilangan dua objek.
+
+2. Failure segmentation yang terukur bersifat spesifik terhadap kondisi overexposed.
+Dua objek pada val_overx_1 tidak berhasil masuk ke pipeline classification. Karena itu, kedua objek tersebut tidak dihitung sebagai classification error; kegagalannya dicatat pada segmentation track.
+
+3. Tidak terdapat bukti baseline baru bahwa rotation/layout menyebabkan watershed merging pada dataset validation ini.
+Karena masalah watershed yang pernah diketahui pada tahap preliminary tidak muncul sebagai failure terukur pada baseline baru, perbaikannya tidak diposisikan sebagai Phase-I discovery. Jika dikerjakan, perbaikan watershed diperlakukan sebagai Product Track hardening/known-bug hardening dan cukup disertai smoke/regression check agar peningkatan splitting tidak menimbulkan false split baru.
+
+Failure case segmentation yang diidentifikasi:
+- FC-S1 — Overexposure segmentation failure pada val_overx_1: 13/15 objek berhasil diperoleh.
+
+Prioritas:
+Segmentation tetap menjadi secondary track karena baseline sudah mencapai 538/540 objek. Fokus utama Evaluation Track tetap berada pada classifier, sementara failure overexposed dapat ditangani secara terbatas dan diuji ulang untuk memastikan tidak terjadi regresi pada variant lain.
+
+
+C. RINGKASAN CHECKPOINT 1
+
+Baseline menunjukkan bahwa masalah terbesar KakaoLens saat ini berada pada classifier, bukan segmenter.
+
+Classification:
+- Balanced Accuracy canonical hanya 54,9%.
+- Balanced Accuracy agregat seluruh variant 49,5%.
+- Recall Fermented agregat hanya 20,7% dibanding Recall Poorly Fermented 78,4%.
+- Overexposed dan rotation menunjukkan degradasi tambahan paling jelas.
+- Warm lighting menunjukkan ketidakstabilan antar kelas yang sangat ekstrem.
+
+Segmentation:
+- 538/540 biji berhasil diperoleh.
+- 35/36 foto memiliki jumlah deteksi yang tepat.
+- Failure terukur hanya muncul pada satu foto overexposed (13/15).
+
+Dengan demikian, Phase II sebaiknya dimulai dari perbaikan generalisasi classifier terhadap domain lokal. Robustness-specific intervention baru dipilih setelah classifier hasil adaptasi umum dijalankan kembali terhadap seluruh enam acquisition variants. Segmentation dapat berjalan sebagai track sekunder dengan fokus terbatas pada failure overexposed yang benar-benar ditemukan pada baseline.

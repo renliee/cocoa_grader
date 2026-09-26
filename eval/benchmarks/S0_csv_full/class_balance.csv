@@ -1,0 +1,13 @@
+set,variant,fermented,poorly_fermented,defect,skip,unlabelled
+test,blur,51,24,0,0,0
+test,canon,61,29,0,0,0
+test,lowl,61,29,0,0,0
+test,overx,61,29,0,0,0
+test,rotate,56,34,0,0,0
+test,warm,61,29,0,0,0
+val,blur,61,29,0,0,0
+val,canon,61,29,0,0,0
+val,lowl,61,29,0,0,0
+val,overx,59,29,0,0,0
+val,rotate,62,28,0,0,0
+val,warm,63,27,0,0,0

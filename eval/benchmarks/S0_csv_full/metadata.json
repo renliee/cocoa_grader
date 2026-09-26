@@ -1,0 +1,36 @@
+{
+  "bench_id": "S0_csv_full",
+  "created": "2026-09-26 10:29:28 WIB",
+  "status": "OK",
+  "errors": [],
+  "git": {
+    "head": "ddcfe0a35fd513aeb7fed15286970a9074d03c16",
+    "dirty": false
+  },
+  "env": {
+    "cv2": "5.0.0",
+    "numpy": "2.4.4",
+    "python": "3.11.8"
+  },
+  "segment_py_sha256": "9248dacdc0ffc24094fcfa3528747a89797f34c98a7e09a309dbf1f4046943fc",
+  "config_py_sha256": "ab2a90e64274839533b65ac9bee56a02e5b6d941a5eba215ac0788ff72c3c9aa",
+  "target_w": 1600,
+  "pad": 4,
+  "n_images": 72,
+  "n_beans": 1063,
+  "images_dir": "/home/ren-lie/cocoa/cocoa_grader/data",
+  "labels_csv": "/home/ren-lie/cocoa/cocoa_grader/data/labels.csv",
+  "labels_sha256": "753c4b4bca564168110a64ca0013fedf942e3b5c002dd3fa2e51b01f16c7936d",
+  "position_check_flags": 0,
+  "label_mode": "own",
+  "held": {},
+  "canon_idx_source": "label CSV",
+  "sets": [
+    "val",
+    "test"
+  ],
+  "relabel_from_canon": {},
+  "sheet_count_flags": [],
+  "sheet_count_flags_after_relabel": [],
+  "position_unverifiable": []
+}

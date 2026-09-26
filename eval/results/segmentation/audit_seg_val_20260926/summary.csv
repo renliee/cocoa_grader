@@ -1,0 +1,8 @@
+variant,photos,detected,expected,photos_exact
+canon,6,90,90,6
+blur,6,90,90,6
+lowl,6,90,90,6
+overx,6,88,90,5
+rotate,6,90,90,6
+warm,6,90,90,6
+ALL,36,538,540,35

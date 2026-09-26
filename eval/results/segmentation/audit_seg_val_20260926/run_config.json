@@ -1,0 +1,71 @@
+{
+  "task": "segmentation",
+  "run": "audit_seg_val_20260926",
+  "split": "val",
+  "created": "2026-09-26 12:34:12 WIB",
+  "git": {
+    "head": "ddcfe0a35fd513aeb7fed15286970a9074d03c16",
+    "dirty": false
+  },
+  "env": {
+    "cv2": "5.0.0",
+    "numpy": "2.4.4",
+    "python": "3.11.8"
+  },
+  "code": {
+    "segment.py": {
+      "sha256": "9248dacdc0ffc24094fcfa3528747a89797f34c98a7e09a309dbf1f4046943fc",
+      "copy": "code_snapshot/segment.py"
+    },
+    "config.py": {
+      "sha256": "ab2a90e64274839533b65ac9bee56a02e5b6d941a5eba215ac0788ff72c3c9aa",
+      "copy": "code_snapshot/config.py"
+    }
+  },
+  "config_values": {
+    "AREA_MAX_FACTOR": "1.75",
+    "AREA_MIN_FACTOR": "0.45",
+    "AREA_SPLIT_FACTOR": "1.4",
+    "CLASSIFY_BATCH": "16",
+    "CLASSIFY_IMGSZ": "224",
+    "CLASS_NAMES": "('fermented', 'poorly_fermented')",
+    "CLEAN_OPEN_KERNEL": "5",
+    "CROP_PAD": "4",
+    "FRAGMENT_MIN_FACTOR": "0.08",
+    "GREEN_CAST_G_GAIN": "1.24",
+    "MASK_BACKGROUND_IN_CROP": "True",
+    "MASK_BLUR_KERNEL": "(5, 5)",
+    "MASK_CHROMA_WEIGHT": "2.0",
+    "MASK_MAD_FLOOR": "1.5",
+    "MASK_MAD_K": "7.0",
+    "MASK_MIN_ROI_PIXELS": "1000",
+    "MAX_ASPECT_RATIO": "3.2",
+    "MIN_SAMPLE_FULL": "300",
+    "MIN_SOLIDITY": "0.45",
+    "PAD_MODE": "'black'",
+    "PAPER_BLUR_KERNEL": "(7, 7)",
+    "PAPER_CLOSE_ITERATIONS": "3",
+    "PAPER_CLOSE_KERNEL": "(15, 15)",
+    "PAPER_ERODE_ITERATIONS": "2",
+    "PAPER_ERODE_KERNEL": "(9, 9)",
+    "PAPER_MIN_FRAME_FRACTION": "0.15",
+    "SPLIT_BG_ITERATIONS": "3",
+    "SPLIT_BG_KERNEL": "(3, 3)",
+    "SPLIT_DIST_MASK": "5",
+    "SPLIT_SEED_FRACTIONS": "(0.45, 0.38, 0.32, 0.26)",
+    "TARGET_WIDTH": "1600",
+    "WARN_FRAGMENT_AREA": "0.05",
+    "WARN_FRAGMENT_RATIO": "0.5"
+  },
+  "images_dir": "/home/ren-lie/cocoa/cocoa_grader/data",
+  "expected_source": "15 beans per photo",
+  "ms_per_photo_mean": 175.3,
+  "limit": null,
+  "summary": {
+    "variant": "ALL",
+    "photos": 36,
+    "detected": 538,
+    "expected": 540,
+    "photos_exact": 35
+  }
+}
